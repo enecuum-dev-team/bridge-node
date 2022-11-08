@@ -4,7 +4,7 @@
   "description": "Tabula bridge node",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "author": "kzhidanov",
   "license": "MIT",
@@ -15,5 +15,8 @@
     "jsrsasign": "^10.5.27",
     "web3": "^1.8.0",
     "yargs": "^17.6.0"
+  },
+  "devDependencies": {
+    "mocha": "^10.1.0"
   }
 }

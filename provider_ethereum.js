@@ -20,15 +20,16 @@ module.exports = class EthereumNetwork extends Network{
 
 		let receipt = await this.Web3.eth.getTransactionReceipt(tx_hash);
 
-		let contract_address = receipt.logs[1].address;
-		if (contract_address !== this.contract_address){
-			console.error(`Contract address mismatch, ${this.contract_address} expected, ${contract_address} parsed`);
+		let log_entry = receipt.logs.filter((entry) => {return entry.address === this.contract_address})[0];
+		if (!log_entry){
+			console.error(`Failed to retrive log entry for ${this.contract_address}`);
+			console.trace(receipt);
 			return;
 		}
 
 		let topic = this.Web3.utils.sha3("Lock(bytes,uint24,uint256,address,address)");
 
-		let params = this.Web3.eth.abi.decodeParameters(['bytes', 'uint24','uint256','address','address'], receipt.logs[1].data);
+		let params = this.Web3.eth.abi.decodeParameters(['bytes', 'uint24', 'uint256', 'address', 'address'], log_entry.data);
 
 		console.trace(`Extracted params ${JSON.stringify(params)}`);
 
@@ -37,8 +38,14 @@ module.exports = class EthereumNetwork extends Network{
 		let amount = params["2"];
 		let src_hash = params["3"];
 		let src_address = params["4"];
+		let ticker = 'wra';
 
-		return {dst_address, dst_network, amount, src_hash, src_address};
+		//trim 0x
+		dst_address = dst_address.slice(2);
+		src_address = src_address.slice(2);
+		src_hash = src_hash.slice(2);
+
+		return {dst_address, dst_network, amount, src_hash, src_address, ticker};
 	}
 
 	async read_transfers(){

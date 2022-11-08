@@ -4,15 +4,16 @@ let crypto = require('crypto');
 
 let EthereumNetwork = require('./provider_ethereum.js');
 let EnecuumNetwork = require('./provider_enecuum.js');
+let TestNetwork = require('./provider_test.js');
 
-let hash_ticket = function(ticket){
-	let fields = ['src_network', 'src_hash', 'src_address', 'dst_network', 'dst_address', 'origin_network', 'origin_hash', 'amount', 'nonce'];
-	//let concat = fields.reduce((a, v) => a + ticket[v].toString().toLowerCase(), "");
-	//let str = crypto.createHash('sha256').update(concat).digest('hex');
+let calculate_transfer_id = function(ticket){
+	let param_names = ["dst_address", "dst_network", "amount", "src_hash", "src_address", "src_network", "origin_hash", "origin_network", "nonce", "ticker"];
 
-	let hash = crypto.createHash('sha256').update(fields.map(v => crypto.createHash('sha256').update(ticket[v].toString().toLowerCase()).digest('hex')).join("")).digest('hex');
+	let params_str = param_names.map(v => crypto.createHash('sha256').update(ticket[v].toString().toLowerCase()).digest('hex')).join("");
 
-	return hash;
+	let transfer_id = crypto.createHash('sha256').update(params_str).digest('hex');
+
+	return transfer_id;
 }
 
 module.exports = class Node {
@@ -46,7 +47,6 @@ module.exports = class Node {
 			}
 			console.info(`Lock data for ${txHash} = ${JSON.stringify(lock)}`);
 
-
 			// choose destination network
 			let dst_network = config.networks.filter((network) => {return network.network_id === lock.dst_network})[0];
 
@@ -65,7 +65,6 @@ module.exports = class Node {
 			}
 			console.info(`Smart contract state = ${JSON.stringify(src_state)}`);
 
-
 			console.info(`Checking transfers at ${src_network.caption}...`);
 			let transfers = await src_network.provider.read_transfers();
 			if (!src_state){
@@ -75,16 +74,18 @@ module.exports = class Node {
 			}
 			console.info(`Transfers = ${JSON.stringify(transfers)}`);
 
+			//creating confirmation
 			let ticket = {};
 
-			//from lock
+			//	from lock
 			ticket.dst_address = lock.dst_address;
 			ticket.dst_network = lock.dst_network;
 			ticket.amount = lock.amount;
 			ticket.src_hash = lock.src_hash;
 			ticket.src_address = lock.src_address;
+			ticket.ticker = lock.ticker;
 
-			//from source
+			//	from source
 			ticket.src_network = src_state.network_id;
 
 			let minted_data = src_state.minted.filter((minted)=>{return minted.wrapped_hash === lock.src_hash})[0];
@@ -93,11 +94,11 @@ module.exports = class Node {
 				ticket.origin_hash = minted_data.origin_hash;
 				ticket.origin_network = minted_data.origin_network;
 			} else {
-				ticket.origin_hash = "";
-				ticket.origin_network = "";
+				ticket.origin_hash = ticket.src_hash;
+				ticket.origin_network = ticket.src_network;
 			}
 
-			//from destination
+			//  from destination
 			let transfers_data = transfers.filter((minted)=>{return minted.wrapped_hash === lock.src_hash})[0];
 			if (transfers_data){
 				ticket.nonce = transfers_data.nonce;
@@ -108,8 +109,16 @@ module.exports = class Node {
 			let confirmation = {};
 
 			confirmation.ticket = ticket;
-			confirmation.validator_id = dst_network.pubkey;			
-			confirmation.transfer_id = hash_ticket(ticket);
+			confirmation.validator_id = dst_network.pubkey;
+
+			try {
+				confirmation.transfer_id = calculate_transfer_id(ticket);
+			} catch(e){
+				console.error(`failed to calculate_transfer_id for ${JSON.stringify(ticket)}`);
+				console.error(e);
+				res.send({});
+			}
+
 			confirmation.validator_sign = dst_network.provider.sign(confirmation.transfer_id);
 
 			res.send(confirmation);
@@ -133,6 +142,9 @@ module.exports = class Node {
 					break;
 				case 'enecuum':
 					network.provider = new EnecuumNetwork(network);
+					break;
+				case 'test':
+					network.provider = new TestNetwork(network);
 					break;
 				default:
 					console.fatal(`Unknown network type - ${network.type}`)
