@@ -63,7 +63,7 @@ module.exports = class TestNetwork extends Network{
 	}
 
 	async send_lock(params){
-		console.trace(`Requesting lock with params ${params} at ${this.caption}`);
+		console.trace(`Sending lock with params ${params} at ${this.caption}`);
 
 		try {
 			let hash = (await http_post(`${this.url}/api/v1/lock`, params)).result.hash;
@@ -75,7 +75,7 @@ module.exports = class TestNetwork extends Network{
 	}
 
 	async send_claim(params){
-		console.trace(`Requesting claim with params ${params} at ${this.caption}`);
+		console.trace(`Sending claim with params ${JSON.stringify(params)} at ${this.caption}`);
 
 		try {
 			let hash = (await http_post(`${this.url}/api/v1/claim`, params)).result.hash;
@@ -92,7 +92,7 @@ module.exports = class TestNetwork extends Network{
 		try {
 			let response = await http_get(`${this.url}/api/v1/account?address=${address}`);
 			if (response.err === 0){
-				return response.result.account;
+				return response.result;
 			} else {
 				console.error(`failed to get account data`);
 				return null;
@@ -103,28 +103,84 @@ module.exports = class TestNetwork extends Network{
 		}
 	}
 
+	async wait_lock(tx_hash){
+		console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
+		try {
+			let url = `${this.url}/api/v1/read_transaction?hash=${tx_hash}`;
+			let response = await http_get(url);
+
+			if (response.err !== 0){
+				return false;
+			} else {
+				return true;
+			}
+		} catch(e){
+			return false;
+		}
+	}
+
+	async wait_claim(tx_hash){
+		console.trace(`Waiting for claim transaction ${tx_hash} at ${this.caption}`);
+		try {
+			let url = `${this.url}/api/v1/read_transaction?hash=${tx_hash}`;
+			let response = await http_get(url);
+
+			if (response.err !== 0){
+				return false;
+			} else {
+				return true;
+			}
+		} catch(e){
+			return false;
+		}
+	}
+
 	async read_lock(tx_hash){
 		console.trace(`Extracting lock_data for ${tx_hash} at ${this.caption}`);
 
 		try {
-			let url = `${this.url}/api/v1/read_lock?hash=${tx_hash}`;
+			let url = `${this.url}/api/v1/read_transaction?hash=${tx_hash}`;
 			let response = await http_get(url);
 
 			if (response.err !== 0){
+				console.error(`err!==0`);
 				return null;
 			} else {
-				let {dst_address, dst_network, amount, src_hash, src_address, ticker} = response.result;
-				if (dst_address) {
+				let {dst_address, dst_network, amount, src_hash, src_address} = response.result;
+				if (dst_address && dst_network && amount && src_hash && src_address) {
 					let tokens = await http_get(`${this.url}/api/v1/tokens`);
 					let ticker = tokens.filter((t) => {return t.hash === src_hash})[0];
 					console.trace(`tokens = ${tokens}`);
 
 					return {dst_address, dst_network, amount, src_hash, src_address, ticker};
 				} else {
+					console.error(`failed to parse ${JSON.stringify(response.result)}`);
+					return null;					
+				}
+			}
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
+	async read_claim(tx_hash){
+		console.trace(`Extracting claim_data for ${tx_hash} at ${this.caption}`);
+
+		try {
+			let url = `${this.url}/api/v1/read_claim?hash=${tx_hash}`;
+			let response = await http_get(url);
+
+			if (response.err !== 0){
+				return null;
+			} else {
+				let {dst_hash} = response.result;
+				if (dst_hash) {
+					return {dst_hash};
+				} else {
 					return null;
 				}
 			}
-
 		} catch(e){
 			return null;
 		}

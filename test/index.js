@@ -63,6 +63,8 @@ let wait_for = async function(method, args, condition, timeout_ms){
     span -= ((now - start) / 10);
   } while (span > 0);
 
+  console.log('wait end');
+
   return null;
 };
 
@@ -79,7 +81,6 @@ let http_post = function(url, json){
         });
 };
 
-
 describe('happy_case_1', function () {
   this.timeout(0);
 
@@ -90,25 +91,33 @@ describe('happy_case_1', function () {
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
     console.info(`Waiting for approve of ${lock_hash}`);
-    let result = await wait_for(network1.read_lock.bind(network1), [lock_hash], (r) => {return r !== null}, 8000);
-    assert(lock_hash !== null, 'Failed to approve');
+    let lock_result = await wait_for(network1.wait_lock.bind(network1), [lock_hash], (r) => {return r === true}, 3000);
+    assert(lock_result !== null, 'Failed to approve lock');
 
     console.info(`Quering validator with hash ${lock_hash}`);
     let ticket = await http_post(validators[0].url, {networkId : ENGLAND, txHash : lock_hash});
+    assert(ticket.ticket !== null, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
 
     console.info(`Checking balance of ${JOSE_PUBKEY} at ${MEXICO}`);
-    let old_account = await network1.read_account(JOSE_PUBKEY);
-    //console.trace(account);
+    let old_balance = await network2.read_account(JOSE_PUBKEY);
 
     console.info(`Claim ${JSON.stringify(ticket)} at ${MEXICO}`);
-    let claim_hash = await network1.send_claim(ticket);
+    let claim_hash = await network2.send_claim(ticket);
     assert(claim_hash !== null, 'Failed to send claim transaction');
 
+    console.info(`Waiting for approve of ${claim_hash}`);
+    let claim_result = await wait_for(network2.wait_claim.bind(network2), [claim_hash], (r) => {return r === true}, 3000);
+    assert(claim_result !== null, 'Failed to approve claim');
+
+
     console.info(`Checking balance of ${JOSE_PUBKEY} at ${MEXICO}`);
-    let new_account = await network1.read_account(JOSE_PUBKEY);
-    let changes = new_account.filter(n => {return !old_account.some(o => (o.hash === n.hash) && (o.amount === n.amount))});
-    console.info(`Balance of ${JOSE_PUBKEY} changed to ${JSON.stringify(changes)}`);
-    assert(changes.length !== null, `No tokens transferred to address ${JOSE_PUBKEY} at ${MEXICO}`);
+    let new_balance = await network2.read_account(JOSE_PUBKEY);
+
+
+
+//    let changes = new_account.filter(n => {return !old_account.some(o => (o.hash === n.hash) && (o.amount === n.amount))});
+//    console.info(`Balance of ${JOSE_PUBKEY} changed to ${JSON.stringify(changes)}`);
+//    assert(changes.length !== 0, `No tokens transferred to address ${JOSE_PUBKEY} at ${MEXICO}`);
 
     return 0;
   });
