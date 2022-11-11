@@ -105,7 +105,8 @@ module.exports = class EnecuumNetwork extends Network {
         let status = null;
         do {
             try {
-                status = await http_get(url).status;
+                let res = await http_get(url);
+                status = res.status
             } catch (e) {
                 await (new Promise(resolve => setTimeout(resolve, time)))
             }
@@ -114,7 +115,7 @@ module.exports = class EnecuumNetwork extends Network {
     }
     
     async send_tx (type, parameters, model, prvkey) { 
-        if (Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
+        if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
             throw new Error(`Invalid 'parameters' object`);
         let parser = new ContractParser(config)
         let data = parser.dataFromObject({type, parameters})
@@ -129,8 +130,11 @@ module.exports = class EnecuumNetwork extends Network {
         let hash = Utils.hash_tx_fields(tx)
         tx.sign = Utils.ecdsa_sign(prvkey, hash)
         try {
-            let status = (await http_post(`${this.url}/api/v1/tx`, [tx])).status;
-            return status === 0;
+            let res = (await http_post(`${this.url}/api/v1/tx`, [tx])).result;
+            if (res[0].status === 0)
+                return res[0].hash
+            else 
+                return null
         } catch (error) {
             console.log(error);
             return null;
@@ -145,7 +149,7 @@ module.exports = class EnecuumNetwork extends Network {
             "amount",
             "hash"
         ];
-        await this.send_tx("token_send_over_bridge", params, model, prvkey);
+        return await this.send_tx("token_send_over_bridge", params, model, prvkey);
     }
     
     async send_claim(params, prvkey) {

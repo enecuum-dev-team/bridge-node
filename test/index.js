@@ -9,9 +9,9 @@ let TestNetwork = require('../provider_test.js');
 const ENGLAND = 17;
 const ALICE_PUBKEY = "11111";
 const BOB_PUBKEY = "22222";
-const POUND = "33333";
+const POUND = "0000000000000000000000000000000000000000000000000000000000000000";
 
-const MEXICO = 23;
+const MEXICO = "23";
 const JOSE_PUBKEY = keys.enecuum.pubkey;
 const ISABEL_PUBKEY = "666"
 
@@ -40,9 +40,9 @@ console.fatal = function (...msg) {
 require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss', level: 'silly', extend:{fatal:0, debug:4, trace:5, silly:6}, include:['silly', 'trace','debug','info','warn','error','fatal']});
 
 let sleep = function(ms){
-        return new Promise(function(resolve, reject){
-                setTimeout(() => resolve(), ms)
-        });
+  return new Promise(function(resolve, reject){
+    setTimeout(() => resolve(), ms)
+  });
 };
 
 let wait_for = async function(method, args, condition, timeout_ms){
@@ -70,16 +70,16 @@ let wait_for = async function(method, args, condition, timeout_ms){
 };
 
 let http_post = function(url, json){
-        return new Promise(function(resolve, reject){
-                request({url, method:"POST", json}, function(err, resp, body){
-                    if (err){
-                        reject();
-                    } else {
-                      //console.log(body);
-                        resolve(body);
-                    }
-            });
-        });
+  return new Promise(function(resolve, reject){
+    request({url, method:"POST", json}, function(err, resp, body){
+      if (err){
+          reject();
+      } else {
+        //console.log(body);
+          resolve(body);
+      }
+    });
+  });
 };
 
 describe('happy_case_1', function () {
@@ -88,27 +88,27 @@ describe('happy_case_1', function () {
   it('First bridge from Alice to Jose', async function () {
 
     console.info('Alice sending transaction...')
-    let lock_hash = await network1.send_lock({dst_address:JOSE_PUBKEY, dst_network:MEXICO, amount:100, src_hash:POUND, src_address:ALICE_PUBKEY}, keys.enecuum.prvkey);
+    let lock_hash = await network1.send_lock({dst_address:JOSE_PUBKEY, dst_network:MEXICO, amount: "100", hash:POUND}, keys.enecuum.prvkey);
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
-    // console.info(`Waiting for approve of ${lock_hash}`);
-    // let lock_result = await wait_for(network1.wait_lock.bind(network1), [lock_hash], (r) => {return r === true}, 3000);
-    // assert(lock_result !== null, 'Failed to approve lock');
+    console.info(`Waiting for approve of ${lock_hash}`);
+    let lock_result = await wait_for(network1.wait_lock.bind(network1), [lock_hash], (r) => {return r === true}, 3000);
+    assert(lock_result !== null, 'Failed to approve lock');
 
-    // console.info(`Quering validator with hash ${lock_hash}`);
-    // let ticket = await http_post(validators[0].url, {networkId : ENGLAND, txHash : lock_hash});
-    // assert(ticket.ticket !== null, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
+    console.info(`Quering validator with hash ${lock_hash}`);
+    let ticket = await http_post(validators[0].url, {networkId : ENGLAND, txHash : lock_hash});
+    assert(ticket.ticket !== null, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
 
-    // console.info(`Checking balance of ${JOSE_PUBKEY} at ${MEXICO}`);
-    // let old_balance = await network2.read_account(JOSE_PUBKEY);
+    console.info(`Checking balance of ${JOSE_PUBKEY} at ${MEXICO}`);
+    let old_balance = await network2.read_account(JOSE_PUBKEY);
 
-    // console.info(`Claim ${JSON.stringify(ticket)} at ${MEXICO}`);
-    // let claim_hash = await network2.send_claim(ticket);
-    // assert(claim_hash !== null, 'Failed to send claim transaction');
+    console.info(`Claim ${JSON.stringify(ticket)} at ${MEXICO}`);
+    let claim_hash = await network2.send_claim(ticket);
+    assert(claim_hash !== null, 'Failed to send claim transaction');
 
-    // console.info(`Waiting for approve of ${claim_hash}`);
-    // let claim_result = await wait_for(network2.wait_claim.bind(network2), [claim_hash], (r) => {return r === true}, 3000);
-    // assert(claim_result !== null, 'Failed to approve claim');
+    console.info(`Waiting for approve of ${claim_hash}`);
+    let claim_result = await wait_for(network2.wait_claim.bind(network2), [claim_hash], (r) => {return r === true}, 3000);
+    assert(claim_result !== null, 'Failed to approve claim');
 
 
     // console.info(`Checking balance of ${JOSE_PUBKEY} at ${MEXICO}`);
