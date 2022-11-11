@@ -17,20 +17,14 @@ let validators = [{url:"http://localhost:8080/api/v1/notify"}];
 let ENGLAND = {provider : new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"}), id : 17};
 let MEXICO = {provider : new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"}), id : 23};
 
-console.trace = function (...msg) {
-  console.log(...msg);
-};
-
-console.debug = function (...msg) {
-  console.log(...msg);
-};
-
-console.silly = function (...msg) {
-  console.log(...msg);
-};
-
+console.silly = function (...msg) {console.log(`\x1b[35m%s\x1b[0m`, ...msg);};
+console.trace = function (...msg) {console.log(`\x1b[36m\x1b[1m%s\x1b[0m`, ...msg);};
+console.debug = function (...msg) {console.log(`\x1b[37m%s\x1b[0m`, ...msg);};
+console.info = function (...msg) {console.log(`\x1b[37m\x1b[1m%s\x1b[0m`, ...msg);};
+console.warn = function (...msg) {console.log(`\x1b[33m%s\x1b[0m`, ...msg);};
+console.error = function (...msg) {console.log(`\x1b[31m\x1b[1m%s\x1b[0m`, ...msg);};
 console.fatal = function (...msg) {
-  console.log(...msg);
+  console.log(`\x1b[31m%s\x1b[0m`, ...msg);
   process.exit(1);
 };
 
@@ -105,19 +99,19 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     let dst_network = dst_network_obj.id;
 
 
-    console.info(`Checking balance of ${src_address} at ${src_network}`);
+    console.debug(`Checking balance of ${src_address} at ${src_network}`);
     let old_sender = await src_provider.get_balance(src_address);
     console.info(`old sender = ${JSON.stringify(old_sender)}`);
 
-    console.info('Alice sending transaction...')
+    console.debug('Alice sending transaction...')
     let lock_hash = await src_provider.send_lock({dst_address, dst_network, amount, src_hash, src_address});
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
-    console.info(`Waiting for approve of ${lock_hash}`);
+    console.debug(`Waiting for approve of ${lock_hash}`);
     let lock_result = await wait_for(src_provider.wait_lock.bind(src_provider), [lock_hash], (r) => {return r === true}, 3000);
     assert(lock_result !== null, 'Failed to approve lock');
 
-    console.info(`Checking balance of ${src_address} at ${src_network}`);
+    console.debug(`Checking balance of ${src_address} at ${src_network}`);
     let new_sender = await src_provider.get_balance(src_address);
     console.info(`new sender = ${JSON.stringify(new_sender)}`);
 
@@ -125,27 +119,27 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     console.info(`sender_diff = ${JSON.stringify(sender_diff)}`);
     assert(sender_diff[src_hash] === -1 * amount, `Sender amount must decrease`);
 
-    console.info(`Quering validator with hash ${lock_hash}`);
+    console.debug(`Quering validator with hash ${lock_hash}`);
     let ticket = await http_post(validators[0].url, {networkId : src_network, txHash : lock_hash});
     assert(ticket.ticket !== null, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
 
-    console.info(`Checking balance of ${dst_address} at ${dst_network}`);
+    console.debug(`Checking balance of ${dst_address} at ${dst_network}`);
     let old_receiver = await dst_provider.get_balance(dst_address);
     console.info(`old receiver = ${JSON.stringify(old_receiver)}`);
 
-    console.info(`Claim ${JSON.stringify(ticket)} at ${dst_network}`);
+    console.debug(`Claim ${JSON.stringify(ticket)} at ${dst_network}`);
     let claim_hash = await dst_provider.send_claim(ticket);
     assert(claim_hash !== null, 'Failed to send claim transaction');
 
-    console.info(`Waiting for approve of ${claim_hash}`);
+    console.debug(`Waiting for approve of ${claim_hash}`);
     let claim_result = await wait_for(dst_provider.wait_claim.bind(dst_provider), [claim_hash], (r) => {return r === true}, 3000);
     assert(claim_result !== null, 'Failed to approve claim');
 
-    console.info(`Parsing claim ${claim_hash}`);
+    console.debug(`Parsing claim ${claim_hash}`);
     let claim_data = await dst_provider.read_claim(claim_hash);
     console.info(`Claim data = ${JSON.stringify(claim_data)}`);
 
-    console.info(`Checking balance of ${dst_address} at ${dst_network}`);
+    console.debug(`Checking balance of ${dst_address} at ${dst_network}`);
     let new_receiver = await dst_provider.get_balance(dst_address, claim_data.dst_hash);
     console.info(`new receiver = ${JSON.stringify(new_receiver)}`);
 
