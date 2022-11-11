@@ -1,22 +1,25 @@
 {
-  "name": "bridge_node",
-  "version": "1.0.0",
-  "description": "Tabula bridge node",
-  "main": "index.js",
-  "scripts": {
-    "test": "mocha"
-  },
-  "author": "kzhidanov",
-  "license": "MIT",
-  "dependencies": {
-    "console-stamp": "^3.0.6",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "jsrsasign": "^10.5.27",
-    "web3": "^1.8.0",
-    "yargs": "^17.6.0"
-  },
-  "devDependencies": {
-    "mocha": "^10.1.0"
-  }
+    "name": "bridge_node",
+    "version": "1.0.0",
+    "description": "Tabula bridge node",
+    "main": "index.js",
+    "scripts": {
+        "test": "mocha"
+    },
+    "author": "kzhidanov",
+    "license": "MIT",
+    "dependencies": {
+        "console-stamp": "^3.0.6",
+        "cors": "^2.8.5",
+        "express": "^4.18.2",
+        "jsrsasign": "^10.5.27",
+        "web3": "^1.8.0",
+        "yargs": "^17.6.0"
+    },
+    "devDependencies": {
+        "mocha": "^10.1.0",
+        "eslint": "^8.27.0",
+        "prettier": "^2.7.1",
+        "eslint-config-prettier": "^8.5.0"
+    }
 }

@@ -1,5 +1,6 @@
 let assert = require('assert');
 let request = require('request');
+let keys = require("../keys.json");
 
 let EthereumNetwork = require('../provider_ethereum.js');
 let EnecuumNetwork = require('../provider_enecuum.js');
@@ -8,15 +9,15 @@ let TestNetwork = require('../provider_test.js');
 const ENGLAND = 17;
 const ALICE_PUBKEY = "11111";
 const BOB_PUBKEY = "22222";
-const POUND = "33333";
+const POUND = "0000000000000000000000000000000000000000000000000000000000000000";
 
-const MEXICO = 23;
-const JOSE_PUBKEY = "555";
+const MEXICO = "23";
+const JOSE_PUBKEY = keys.enecuum.pubkey;
 const ISABEL_PUBKEY = "666"
 
 let validators = [{url:"http://localhost:8080/api/v1/notify"}];
 
-let network1 = new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"});
+let network1 = new EnecuumNetwork({"url" : "http://95.216.207.173", "type" : "enecuum", "caption" : "bitdev", "ticker" : "0000000000000000000000000000000000000000000000000000000000000000", "genesis" : keys.enecuum});
 let network2 = new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"});
 
 console.trace = function (...msg) {
@@ -39,9 +40,9 @@ console.fatal = function (...msg) {
 require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss', level: 'silly', extend:{fatal:0, debug:4, trace:5, silly:6}, include:['silly', 'trace','debug','info','warn','error','fatal']});
 
 let sleep = function(ms){
-        return new Promise(function(resolve, reject){
-                setTimeout(() => resolve(), ms)
-        });
+  return new Promise(function(resolve, reject){
+    setTimeout(() => resolve(), ms)
+  });
 };
 
 let wait_for = async function(method, args, condition, timeout_ms){
@@ -69,16 +70,16 @@ let wait_for = async function(method, args, condition, timeout_ms){
 };
 
 let http_post = function(url, json){
-        return new Promise(function(resolve, reject){
-                request({url, method:"POST", json}, function(err, resp, body){
-                    if (err){
-                        reject();
-                    } else {
-                      //console.log(body);
-                        resolve(body);
-                    }
-            });
-        });
+  return new Promise(function(resolve, reject){
+    request({url, method:"POST", json}, function(err, resp, body){
+      if (err){
+          reject();
+      } else {
+        //console.log(body);
+          resolve(body);
+      }
+    });
+  });
 };
 
 let balance_diff = function(old_balance, new_balance){
@@ -117,7 +118,7 @@ describe('happy_case_1', function () {
     console.info(`old sender = ${JSON.stringify(old_sender)}`);
 
     console.info('Alice sending transaction...')
-    let lock_hash = await network1.send_lock({dst_address, dst_network, amount, src_hash, src_address});
+    let lock_hash = await network1.send_lock({dst_address, dst_network, amount, src_hash, src_address}, keys.enecuum.prvkey);
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
     console.info(`Waiting for approve of ${lock_hash}`);
