@@ -5,19 +5,17 @@ let EthereumNetwork = require('../provider_ethereum.js');
 let EnecuumNetwork = require('../provider_enecuum.js');
 let TestNetwork = require('../provider_test.js');
 
-const ENGLAND = 17;
 const ALICE_PUBKEY = "11111";
 const BOB_PUBKEY = "22222";
 const POUND = "33333";
 
-const MEXICO = 23;
 const JOSE_PUBKEY = "555";
 const ISABEL_PUBKEY = "666"
 
 let validators = [{url:"http://localhost:8080/api/v1/notify"}];
 
-let network1 = new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"});
-let network2 = new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"});
+let ENGLAND = {provider : new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"}), id : 17};
+let MEXICO = {provider : new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"}), id : 23};
 
 console.trace = function (...msg) {
   console.log(...msg);
@@ -100,32 +98,27 @@ let balance_diff = function(old_balance, new_balance){
     return diff;
 }
 
-describe('happy_case_1', function () {
-  this.timeout(0);
+let simple_bridge = async function(src_network_obj, src_address, src_hash, amount, dst_network_obj, dst_address){
+    let src_provider = src_network_obj.provider;
+    let dst_provider = dst_network_obj.provider;
+    let src_network = src_network_obj.id;
+    let dst_network = dst_network_obj.id;
 
-  it('First bridge from Alice to Jose', async function () {
-
-    let src_address = ALICE_PUBKEY;
-    let dst_address = JOSE_PUBKEY;
-    let src_network = ENGLAND;
-    let dst_network = MEXICO;
-    let src_hash = POUND;
-    let amount = 100;
 
     console.info(`Checking balance of ${src_address} at ${src_network}`);
-    let old_sender = await network1.get_balance(src_address);
+    let old_sender = await src_provider.get_balance(src_address);
     console.info(`old sender = ${JSON.stringify(old_sender)}`);
 
     console.info('Alice sending transaction...')
-    let lock_hash = await network1.send_lock({dst_address, dst_network, amount, src_hash, src_address});
+    let lock_hash = await src_provider.send_lock({dst_address, dst_network, amount, src_hash, src_address});
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
     console.info(`Waiting for approve of ${lock_hash}`);
-    let lock_result = await wait_for(network1.wait_lock.bind(network1), [lock_hash], (r) => {return r === true}, 3000);
+    let lock_result = await wait_for(src_provider.wait_lock.bind(src_provider), [lock_hash], (r) => {return r === true}, 3000);
     assert(lock_result !== null, 'Failed to approve lock');
 
     console.info(`Checking balance of ${src_address} at ${src_network}`);
-    let new_sender = await network1.get_balance(src_address);
+    let new_sender = await src_provider.get_balance(src_address);
     console.info(`new sender = ${JSON.stringify(new_sender)}`);
 
     let sender_diff = balance_diff(old_sender, new_sender);
@@ -137,28 +130,49 @@ describe('happy_case_1', function () {
     assert(ticket.ticket !== null, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
 
     console.info(`Checking balance of ${dst_address} at ${dst_network}`);
-    let old_receiver = await network2.get_balance(dst_address);
+    let old_receiver = await dst_provider.get_balance(dst_address);
     console.info(`old receiver = ${JSON.stringify(old_receiver)}`);
 
     console.info(`Claim ${JSON.stringify(ticket)} at ${dst_network}`);
-    let claim_hash = await network2.send_claim(ticket);
+    let claim_hash = await dst_provider.send_claim(ticket);
     assert(claim_hash !== null, 'Failed to send claim transaction');
 
     console.info(`Waiting for approve of ${claim_hash}`);
-    let claim_result = await wait_for(network2.wait_claim.bind(network2), [claim_hash], (r) => {return r === true}, 3000);
+    let claim_result = await wait_for(dst_provider.wait_claim.bind(dst_provider), [claim_hash], (r) => {return r === true}, 3000);
     assert(claim_result !== null, 'Failed to approve claim');
 
     console.info(`Parsing claim ${claim_hash}`);
-    let claim_data = await network2.read_claim(claim_hash);
+    let claim_data = await dst_provider.read_claim(claim_hash);
     console.info(`Claim data = ${JSON.stringify(claim_data)}`);
 
     console.info(`Checking balance of ${dst_address} at ${dst_network}`);
-    let new_receiver = await network2.get_balance(dst_address, claim_data.dst_hash);
+    let new_receiver = await dst_provider.get_balance(dst_address, claim_data.dst_hash);
     console.info(`new receiver = ${JSON.stringify(new_receiver)}`);
 
     let receiver_diff = balance_diff(old_receiver, new_receiver);
     console.info(`receiver_diff = ${JSON.stringify(receiver_diff)}`);
     assert(Object.values(receiver_diff)[0] === amount, `Receiver amount must increase`);
+
+    let dst_hash = Object.keys(receiver_diff)[0];
+
+    return {dst_hash};
+}
+
+describe('happy_case_1', function () {
+  this.timeout(0);
+
+  it('minting logic test', async function () {
+
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 100, MEXICO, JOSE_PUBKEY);
+    let mexican_pound = bridge1.dst_hash;
+
+    //return 0;
+
+    console.log(`===============================================================`);
+    await sleep(2000);
+
+    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 10, ENGLAND, ALICE_PUBKEY);
+    assert(mexican_pound === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
 
     return 0;
   });
