@@ -154,6 +154,7 @@ app.post('/api/v1/claim', async (req, res) => {
 		setTimeout(function(){
 			let token_hash = create_token(ticker);
 			transactions[tx_hash] = {dst_hash:token_hash};
+			add_amount(dst_address, token_hash, amount);
 		}, config.tx_confirmation_delay);
 
 		result = {err:0, result:{hash:tx_hash}};
@@ -199,7 +200,6 @@ app.get('/api/v1/account', async (req, res) => {
 	console.trace(`on account ${JSON.stringify(req.query)}`);
 	let result = undefined;
 	try {
-		//account = state.ledger[account];
 		if (state.ledger[req.query.address]){
 			result = {err:0, result:state.ledger[req.query.address]};
 		} else {

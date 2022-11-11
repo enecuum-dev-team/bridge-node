@@ -86,11 +86,11 @@ module.exports = class TestNetwork extends Network{
 		}
 	}
 
-	async read_account(address){
+	async get_balance(address, hash){
 		console.trace(`Reading account ${address} at ${this.caption}`);
 
 		try {
-			let response = await http_get(`${this.url}/api/v1/account?address=${address}`);
+			let response = await http_get(`${this.url}/api/v1/account?address=${address}&hash=${hash}`);
 			if (response.err === 0){
 				return response.result;
 			} else {
@@ -168,7 +168,7 @@ module.exports = class TestNetwork extends Network{
 		console.trace(`Extracting claim_data for ${tx_hash} at ${this.caption}`);
 
 		try {
-			let url = `${this.url}/api/v1/read_claim?hash=${tx_hash}`;
+			let url = `${this.url}/api/v1/read_transaction?hash=${tx_hash}`;
 			let response = await http_get(url);
 
 			if (response.err !== 0){
