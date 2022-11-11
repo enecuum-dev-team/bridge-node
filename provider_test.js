@@ -56,6 +56,7 @@ module.exports = class TestNetwork extends Network{
 		super(network_config);
 		this.type = "test";
 		this.url = network_config.url;
+		this.wrapper_prefix = network_config.wrapper_prefix === undefined ? "wr" : network_config.wrapper_prefix;
 
 		if (network_config.type !== this.type){
 			console.fatal(`Network config initialization failed due type mismatch: ${this.type} required instead ${network_config.type}`);
@@ -63,7 +64,7 @@ module.exports = class TestNetwork extends Network{
 	}
 
 	async send_lock(params){
-		console.trace(`Sending lock with params ${params} at ${this.caption}`);
+		console.trace(`Sending lock with params ${JSON.stringify(params)} at ${this.caption}`);
 
 		try {
 			let hash = (await http_post(`${this.url}/api/v1/lock`, params)).result.hash;
@@ -149,7 +150,7 @@ module.exports = class TestNetwork extends Network{
 				let {dst_address, dst_network, amount, src_hash, src_address} = response.result;
 				if (dst_address && dst_network && amount && src_hash && src_address) {
 					let tokens = await http_get(`${this.url}/api/v1/tokens`);
-					let ticker = tokens.filter((t) => {return t.hash === src_hash})[0];
+					let ticker = this.wrapper_prefix + tokens.filter((t) => {return t.hash === src_hash})[0].ticker;
 					console.trace(`tokens = ${tokens}`);
 
 					return {dst_address, dst_network, amount, src_hash, src_address, ticker};
