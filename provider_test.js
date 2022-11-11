@@ -4,6 +4,26 @@ let http = require('http');
 let request = require('request');
 let rsasign = require('jsrsasign');
 
+console.trace = function (...msg) {
+  console.log(...msg);
+};
+
+console.debug = function (...msg) {
+  console.log(...msg);
+};
+
+console.silly = function (...msg) {
+  console.log(...msg);
+};
+
+console.fatal = function (...msg) {
+  console.log(...msg);
+  process.exit(1);
+};
+
+require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss', level: 'silly', extend:{fatal:0, debug:4, trace:5, silly:6}, include:['silly', 'trace','debug','info','warn','error','fatal']});
+
+
 function ecdsa_sign(skey, msg){
         var sig = new rsasign.Signature({ "alg": 'SHA256withECDSA' });
         let sigdata = { d: skey, curve: 'secp256k1' };
