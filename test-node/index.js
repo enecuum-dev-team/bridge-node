@@ -13,20 +13,14 @@ let config = {
 	tx_confirmation_delay : 10,
 };
 
-console.trace = function (...msg) {
-	console.log(...msg);
-};
-
-console.debug = function (...msg) {
-	console.log(...msg);
-};
-
-console.silly = function (...msg) {
-	console.log(...msg);
-};
-
+console.silly = function (...msg) {console.log(`\x1b[35m%s\x1b[0m`, ...msg);};
+console.trace = function (...msg) {console.log(`\x1b[36m\x1b[1m%s\x1b[0m`, ...msg);};
+console.debug = function (...msg) {console.log(`\x1b[37m%s\x1b[0m`, ...msg);};
+console.info = function (...msg) {console.log(`\x1b[37m\x1b[1m%s\x1b[0m`, ...msg);};
+console.warn = function (...msg) {console.log(`\x1b[33m%s\x1b[0m`, ...msg);};
+console.error = function (...msg) {console.log(`\x1b[31m\x1b[1m%s\x1b[0m`, ...msg);};
 console.fatal = function (...msg) {
-	console.log(...msg);
+	console.log(`\x1b[31m%s\x1b[0m`, ...msg);
 	process.exit(1);
 };
 
@@ -53,9 +47,11 @@ console.info(`config = ${JSON.stringify(config)}`);
 let SMART_ADDRESS = "smart";
 let minted = [];
 let transactions = {};
+let transfers = [];
+
 let state = {
 	tokens :[],
-	ledger :{}
+	ledger :{},
 }
 
 try {
@@ -152,9 +148,15 @@ app.post('/api/v1/claim', async (req, res) => {
 		let tx_hash = random_hash();
 
 		setTimeout(function(){
-			let token_hash = create_token(ticker);
+			let token_hash;
+
+			token_hash = create_token(ticker);
+
 			transactions[tx_hash] = {dst_hash:token_hash};
 			add_amount(dst_address, token_hash, amount);
+
+			transfers.push({src_address, dst_address, src_network, src_hash, nonce});
+
 		}, config.tx_confirmation_delay);
 
 		result = {err:0, result:{hash:tx_hash}};
@@ -173,7 +175,20 @@ app.get('/api/v1/network_id', async (req, res) => {
 
 app.get('/api/v1/transfers', async (req, res) => {
 	console.trace('on transfers', req.query);
-	res.send({});
+	let result;
+
+	try {
+		let {src_address, dst_address, src_network} = req.query;
+
+		let tuple = transfers.filter(t => {t.src_address === src_address && t.dst_address === dst_address && t.src_network === src_network})[0];
+
+		result = {err:0, result:tuple};
+	} catch(e){
+		result = {err:1};
+	}
+
+	console.trace(`result = ${JSON.stringify(result)}`);
+	res.send(result);
 });
 
 app.get('/api/v1/read_transaction', async (req, res) => {
@@ -221,7 +236,7 @@ app.get('/api/v1/tokens', async (req, res) => {
 
 app.get('/api/v1/state', async (req, res) => {
 	console.trace(`on state ${JSON.stringify(req.query)}`);
-	let result = [state, transactions];
+	let result = {state, transactions, transfers};
 
 	console.trace(`result = ${JSON.stringify(result)}`);
 	res.send(result);
