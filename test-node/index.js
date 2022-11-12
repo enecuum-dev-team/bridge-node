@@ -150,8 +150,6 @@ app.post('/api/v1/claim', async (req, res) => {
 		setTimeout(function(){
 			let minted_hash;
 
-			//check transfers
-
 			let transfer_i = transfers.findIndex((t) => {return (t.src_hash === src_hash) && (t.src_address === src_address) && (t.dst_address === dst_address) && (t.src_network === src_network);});
 
 			let inner_nonce = 0;
@@ -167,12 +165,22 @@ app.post('/api/v1/claim', async (req, res) => {
 					add_amount(dst_address, origin_hash, amount);
 					transactions[tx_hash] = {dst_hash:origin_hash};
 				} else {
-					console.debug(`Creating new wrapper`);
-					minted_hash = create_token(ticker);
-					minted.push({wrapped_hash:minted_hash, origin_hash, origin_network});
+					let minted_i = minted.findIndex((m) => {return (m.origin_hash === origin_hash) && (m.origin_network === origin_network)});
 
-					transactions[tx_hash] = {dst_hash:minted_hash};
-					add_amount(dst_address, minted_hash, amount);
+					if (minted_i > -1){
+						console.debug(`Minting existing wrapper`);
+						let wrapped_hash = minted[minted_i].wrapped_hash;
+
+						transactions[tx_hash] = {dst_hash:wrapped_hash};
+						add_amount(dst_address, wrapped_hash, amount);
+					} else {
+						console.debug(`Creating new wrapper`);
+						minted_hash = create_token(ticker);
+						minted.push({wrapped_hash:minted_hash, origin_hash, origin_network});
+
+						transactions[tx_hash] = {dst_hash:minted_hash};
+						add_amount(dst_address, minted_hash, amount);
+					}
 				}
 
 				if (transfer_i === -1){

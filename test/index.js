@@ -181,6 +181,11 @@ describe('happy_case_1', function () {
     let bridge3 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 100, GERMANY, HANS_PUBKEY);
     let german_pound = bridge3.dst_hash;
 
+    console.log(`===============================================================`);
+
+    let bridge4 = await simple_bridge(GERMANY, HANS_PUBKEY, german_pound, 100, MEXICO, JOSE_PUBKEY);
+    assert (bridge4.dst_hash === mexican_pound, "two-way transfers must merge tokens");
+
     return 0;
   });
 });
