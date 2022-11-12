@@ -173,18 +173,23 @@ describe('happy_case_1', function () {
 
     console.log(`===============================================================`);
 
-    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 10, ENGLAND, ALICE_PUBKEY);
+    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 50, ENGLAND, ALICE_PUBKEY);
     assert(POUND === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
 
     console.log(`===============================================================`);
 
-    let bridge3 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 100, GERMANY, HANS_PUBKEY);
+    let bridge3 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 50, GERMANY, HANS_PUBKEY);
     let german_pound = bridge3.dst_hash;
 
     console.log(`===============================================================`);
 
-    let bridge4 = await simple_bridge(GERMANY, HANS_PUBKEY, german_pound, 100, MEXICO, JOSE_PUBKEY);
-    assert (bridge4.dst_hash === mexican_pound, "two-way transfers must merge tokens");
+    let bridge4 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 50, GERMANY, HANS_PUBKEY);
+    assert (bridge4.dst_hash === german_pound, "two-way transfers must merge tokens");
+
+    console.log(`===============================================================`);
+
+    let bridge5 = await simple_bridge(GERMANY, HANS_PUBKEY, german_pound, 100, ENGLAND, ALICE_PUBKEY);
+    assert(POUND === bridge5.dst_hash, "Circular transfer must unlock, not mint");
 
     return 0;
   });
