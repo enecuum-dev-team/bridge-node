@@ -5,17 +5,18 @@ let EthereumNetwork = require('../provider_ethereum.js');
 let EnecuumNetwork = require('../provider_enecuum.js');
 let TestNetwork = require('../provider_test.js');
 
-const ALICE_PUBKEY = "11111";
-const BOB_PUBKEY = "22222";
-const POUND = "33333";
+const POUND = "POUND_HASH";
+const ALICE_PUBKEY = "ALICE";
 
-const JOSE_PUBKEY = "555";
-const ISABEL_PUBKEY = "666"
+const JOSE_PUBKEY = "JOSE";
+
+const HANS_PUBKEY = "HANS";
 
 let validators = [{url:"http://localhost:8080/api/v1/notify"}];
 
-let ENGLAND = {provider : new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"}), id : 17};
-let MEXICO = {provider : new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"}), id : 23};
+let ENGLAND = {provider : new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"})};
+let MEXICO = {provider : new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"})};
+let GERMANY = {provider : new TestNetwork({"url" : "http://localhost:8029", "type" : "test", "caption" : "GERMANY"})};
 
 console.silly = function (...msg) {console.log(`\x1b[35m%s\x1b[0m`, ...msg);};
 console.trace = function (...msg) {console.log(`\x1b[36m\x1b[1m%s\x1b[0m`, ...msg);};
@@ -121,7 +122,7 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
 
     console.debug(`Quering validator with hash ${lock_hash}`);
     let ticket = await http_post(validators[0].url, {networkId : src_network, txHash : lock_hash});
-    assert(ticket.ticket !== null, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
+    assert(ticket.err === undefined, `Validator denied to confirm lock, ticket = ${JSON.stringify(ticket)}`);
 
     console.debug(`Checking balance of ${dst_address} at ${dst_network}`);
     let old_receiver = await dst_provider.get_balance(dst_address);
@@ -155,18 +156,30 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
 describe('happy_case_1', function () {
   this.timeout(0);
 
+  before(async function(){
+    console.info(`Updating network ids...`);
+
+    ENGLAND.id = (await ENGLAND.provider.read_state()).network_id;
+    MEXICO.id = (await MEXICO.provider.read_state()).network_id;
+    GERMANY.id = (await GERMANY.provider.read_state()).network_id;
+
+    console.log('Update complete');
+  });
+
   it('minting logic test', async function () {
 
     let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 100, MEXICO, JOSE_PUBKEY);
     let mexican_pound = bridge1.dst_hash;
 
-    //return 0;
-
     console.log(`===============================================================`);
-    await sleep(2000);
 
     let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 10, ENGLAND, ALICE_PUBKEY);
-    assert(mexican_pound === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
+    assert(POUND === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
+
+    console.log(`===============================================================`);
+
+    let bridge3 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 100, GERMANY, HANS_PUBKEY);
+    let german_pound = bridge3.dst_hash;
 
     return 0;
   });

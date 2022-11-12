@@ -63,16 +63,18 @@ module.exports = class Node {
 				res.send({err:1});
 				return;
 			}
-			console.info(`Smart contract state = ${JSON.stringify(src_state)}`);
+			console.info(`src_state = ${JSON.stringify(src_state)}`);
 
-			console.info(`Checking transfers at ${src_network.caption}...`);
-			let transfers = await src_network.provider.read_transfers();
-			if (!src_state){
+			console.info(`Checking transfers at ${dst_network.caption}...`);
+			let transfer = await dst_network.provider.read_transfers(lock.src_address, lock.src_hash, src_state.network_id, lock.dst_address);
+			if (!transfer){
 				console.error(`Failed to read transfers at ${src_network.caption}`);
 				res.send({err:1});
 				return;
+			} else {
+
 			}
-			console.info(`Transfers = ${JSON.stringify(transfers)}`);
+			console.info(`Transfer = ${JSON.stringify(transfer)}`);
 
 			//creating confirmation
 			let ticket = {};
@@ -83,28 +85,31 @@ module.exports = class Node {
 			ticket.amount = lock.amount;
 			ticket.src_hash = lock.src_hash;
 			ticket.src_address = lock.src_address;
-			ticket.ticker = lock.ticker;
 
 			//	from source
 			ticket.src_network = src_state.network_id;
 
-			let minted_data = src_state.minted.filter((minted)=>{return minted.wrapped_hash === lock.src_hash})[0];
+			let minted_data = src_state.minted.find((minted)=>{console.silly(`${JSON.stringify(minted)}, ${lock.src_hash}`); return minted.wrapped_hash === lock.src_hash});
+			console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;
 				ticket.origin_network = minted_data.origin_network;
+				ticket.ticker = "DUMMY";
 			} else {
 				ticket.origin_hash = ticket.src_hash;
 				ticket.origin_network = ticket.src_network;
+				ticket.ticker = "wr" + lock.ticker;
 			}
 
 			//  from destination
-			let transfers_data = transfers.filter((minted)=>{return minted.wrapped_hash === lock.src_hash})[0];
-			if (transfers_data){
-				ticket.nonce = transfers_data.nonce;
+			if (transfer[0]){
+				ticket.nonce = transfer[0].nonce + 1;
 			} else {
 				ticket.nonce = 1;
-			}	
+			}
+
+			console.info(`ticket = ${JSON.stringify(ticket)}`);
 
 			let confirmation = {};
 

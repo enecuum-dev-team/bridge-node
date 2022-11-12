@@ -150,8 +150,8 @@ module.exports = class TestNetwork extends Network{
 				let {dst_address, dst_network, amount, src_hash, src_address} = response.result;
 				if (dst_address && dst_network && amount && src_hash && src_address) {
 					let tokens = await http_get(`${this.url}/api/v1/tokens`);
-					let ticker = this.wrapper_prefix + tokens.filter((t) => {return t.hash === src_hash})[0].ticker;
-					console.trace(`tokens = ${tokens}`);
+					let ticker = tokens.filter((t) => {return t.hash === src_hash})[0].ticker;
+					console.trace(`tokens = ${JSON.stringify(tokens)}`);
 
 					return {dst_address, dst_network, amount, src_hash, src_address, ticker};
 				} else {
@@ -187,8 +187,27 @@ module.exports = class TestNetwork extends Network{
 		}
 	}
 
-	async read_transfers(){
-		return [];
+	async read_transfers(src_address, src_hash, src_network, dst_address){
+		console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
+
+		try {
+			let url = `${this.url}/api/v1/transfers?src_address=${src_address}&src_hash=${src_hash}&src_network=${src_network}&dst_address=${dst_address}`;
+			let response = await http_get(url);
+
+			if (response.err !== 0){
+				return null;
+			} else {
+				if (response.result.length < 2){
+					return response.result;
+				} else {
+					console.warn(`result should be empty or single-element array`)
+					return null;
+				}
+			}
+		} catch(e){
+			console.warn(e);
+			return null;
+		}
 	}
 
 	async read_state(){

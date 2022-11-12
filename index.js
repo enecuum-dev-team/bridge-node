@@ -5,7 +5,7 @@ let fs = require('fs');
 const CONFIG_FILENAME = 'config.json';
 let config = {
 	"port" : 8080,
-	"loglevel" : "trace",
+	"loglevel" : "silly",
 	"networks" : [
 		{
 			"url" : "https://goerli.infura.io/v3/3fc3a01d3c4544b5a4ba1bea928c62a0",
@@ -54,26 +54,34 @@ let config = {
 			//validator2
 			"pubkey" : "222",
 			"prvkey" : "222"
-			//validator3
+			//vaclidator3
+			//"pubkey" : "02fd060ad909004756e8f29929a71ce2734de3ad394a99affd66a26706a292583d",
+			//"prvkey" : "2d25317fe918879e46abf9f8b475a60398c568dc074cbc94e78a5a94fc015c3f"
+		},
+		{
+			"url" : "http://localhost:8029",
+			"type" : "test",
+			"caption" : "GERMANY",
+			//validator1
+			//"pubkey" : "02792cf144cf81326db717a5316d0a2df0fb937be5a4dd970d34883b00b16315f2",
+			//"prvkey" : "c4310dc5e1401e223d2f54f3bcab82c47b684a71c64960df3b450e2f50836cbb"
+			//validator2
+			"pubkey" : "222",
+			"prvkey" : "222"
+			//vaclidator3
 			//"pubkey" : "02fd060ad909004756e8f29929a71ce2734de3ad394a99affd66a26706a292583d",
 			//"prvkey" : "2d25317fe918879e46abf9f8b475a60398c568dc074cbc94e78a5a94fc015c3f"
 		}	]
 };
 
-console.trace = function (...msg) {
-	console.log(...msg);
-};
-
-console.debug = function (...msg) {
-	console.log(...msg);
-};
-
-console.silly = function (...msg) {
-	console.log(...msg);
-};
-
+console.silly = function (...msg) {console.log(`\x1b[35m%s\x1b[0m`, ...msg);};
+console.trace = function (...msg) {console.log(`\x1b[36m\x1b[1m%s\x1b[0m`, ...msg);};
+console.debug = function (...msg) {console.log(`\x1b[37m%s\x1b[0m`, ...msg);};
+console.info = function (...msg) {console.log(`\x1b[37m\x1b[1m%s\x1b[0m`, ...msg);};
+console.warn = function (...msg) {console.log(`\x1b[33m%s\x1b[0m`, ...msg);};
+console.error = function (...msg) {console.log(`\x1b[31m\x1b[1m%s\x1b[0m`, ...msg);};
 console.fatal = function (...msg) {
-	console.log(...msg);
+	console.log(`\x1b[31m%s\x1b[0m`, ...msg);
 	process.exit(1);
 };
 

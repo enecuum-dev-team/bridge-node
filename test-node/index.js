@@ -148,14 +148,41 @@ app.post('/api/v1/claim', async (req, res) => {
 		let tx_hash = random_hash();
 
 		setTimeout(function(){
-			let token_hash;
+			let minted_hash;
 
-			token_hash = create_token(ticker);
+			//check transfers
 
-			transactions[tx_hash] = {dst_hash:token_hash};
-			add_amount(dst_address, token_hash, amount);
+			let transfer_i = transfers.findIndex((t) => {return (t.src_hash === src_hash) && (t.src_address === src_address) && (t.dst_address === dst_address) && (t.src_network === src_network);});
 
-			transfers.push({src_address, dst_address, src_network, src_hash, nonce});
+			let inner_nonce = 0;
+			if (transfer_i > -1)
+				inner_nonce = transfers[transfer_i].nonce;
+
+			if (inner_nonce + 1 !== nonce){
+				console.warn(`Nonces do not match - ${JSON.stringify(transfers[transfer_i])} and ${nonce}!`);				
+			} else {
+				if (origin_network === config.network_id){
+					console.debug(`Unlocking old token`);
+					add_amount(SMART_ADDRESS, origin_hash, -1 * amount);
+					add_amount(dst_address, origin_hash, amount);
+					transactions[tx_hash] = {dst_hash:origin_hash};
+				} else {
+					console.debug(`Creating new wrapper`);
+					minted_hash = create_token(ticker);
+					minted.push({wrapped_hash:minted_hash, origin_hash, origin_network});
+
+					transactions[tx_hash] = {dst_hash:minted_hash};
+					add_amount(dst_address, minted_hash, amount);
+				}
+
+				if (transfer_i === -1){
+					console.debug(`adding new transfer`);
+					transfers.push({src_address, dst_address, src_network, src_hash, nonce});
+				} else {
+					console.debug(`incrementing existing transfer`);
+					transfers[transfer_i].nonce++;
+				}
+			}
 
 		}, config.tx_confirmation_delay);
 
@@ -178,12 +205,13 @@ app.get('/api/v1/transfers', async (req, res) => {
 	let result;
 
 	try {
-		let {src_address, dst_address, src_network} = req.query;
+		let {src_address, dst_address, src_network, src_hash} = req.query;
 
-		let tuple = transfers.filter(t => {t.src_address === src_address && t.dst_address === dst_address && t.src_network === src_network})[0];
+		let tuple = transfers.filter((t) => {return (t.src_hash === src_hash) && (t.src_address === src_address) && (t.dst_address === dst_address) && (t.src_network.toString() === src_network);});
 
 		result = {err:0, result:tuple};
 	} catch(e){
+		console.warn(e.toString());
 		result = {err:1};
 	}
 
@@ -236,7 +264,7 @@ app.get('/api/v1/tokens', async (req, res) => {
 
 app.get('/api/v1/state', async (req, res) => {
 	console.trace(`on state ${JSON.stringify(req.query)}`);
-	let result = {state, transactions, transfers};
+	let result = {state, transactions, transfers, minted};
 
 	console.trace(`result = ${JSON.stringify(result)}`);
 	res.send(result);
