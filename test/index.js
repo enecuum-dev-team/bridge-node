@@ -5,12 +5,17 @@ let EthereumNetwork = require('../provider_ethereum.js');
 let EnecuumNetwork = require('../provider_enecuum.js');
 let TestNetwork = require('../provider_test.js');
 
-const POUND = "POUND_HASH";
-const ALICE_PUBKEY = "ALICE";
+let config = {
+  pound: "POUND_HASH",
+  alice_pubkey: "ALICE",
+  jose_pubkey: "JOSE",
+  hans_pubkey: "HANS",
+}
 
-const JOSE_PUBKEY = "JOSE";
-
-const HANS_PUBKEY = "HANS";
+const POUND = config.pound;
+const ALICE_PUBKEY = config.alice_pubkey;
+const JOSE_PUBKEY = config.jose_pubkey;
+const HANS_PUBKEY = config.hans_pubkey;
 
 let validators = [{url:"http://localhost:8080/api/v1/notify"}];
 
