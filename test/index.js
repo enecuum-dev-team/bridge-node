@@ -19,7 +19,7 @@ const HANS_PUBKEY = config.hans_pubkey;
 
 let validators = [{url:"http://localhost:8080/api/v1/notify"}];
 
-let ENGLAND = {provider : new TestNetwork({"url" : "http://localhost:8017", "type" : "test", "caption" : "ENGLAND"})};
+let ENGLAND = {provider : new EnecuumNetwork({"url" : "http://95.216.207.173", "type" : "enecuum", "caption" : "ENGLAND"})};
 let MEXICO = {provider : new TestNetwork({"url" : "http://localhost:8023", "type" : "test", "caption" : "MEXICO"})};
 let GERMANY = {provider : new TestNetwork({"url" : "http://localhost:8029", "type" : "test", "caption" : "GERMANY"})};
 
