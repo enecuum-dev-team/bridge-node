@@ -15,6 +15,65 @@ module.exports = class EthereumNetwork extends Network{
 		this.Web3 = new web3(new web3.providers.HttpProvider(network_config.url));
 	}
 
+	async send_lock(params){
+		console.trace(`Sending lock with params ${JSON.stringify(params)} at ${this.caption}`);
+
+		try {
+			throw "Not implemented";
+			return null;
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
+	async send_claim(params){
+		console.trace(`Sending claim with params ${JSON.stringify(params)} at ${this.caption}`);
+
+		try {
+			throw "Not implemented";
+			return null;
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
+	async get_balance(address, hash){
+		console.trace(`Reading account ${address} at ${this.caption}`);
+
+		try {
+			throw "Not implemented";
+			return null;
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
+	async wait_lock(tx_hash){
+		console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
+		try {
+			throw "Not implemented";
+			return true;
+		} catch(e){
+			console.error(e);
+			return false;
+		}
+	}
+
+	async wait_claim(tx_hash){
+		console.trace(`Waiting for claim transaction ${tx_hash} at ${this.caption}`);
+		try {
+			throw "Not implemented";
+			return true;
+		} catch(e){
+			console.error(e);
+			return false;
+		}
+	}
+
+
 	async read_lock(tx_hash){
 		console.trace(`Extracting log for tx_hash ${tx_hash} at ${this.caption}`);
 
@@ -48,8 +107,29 @@ module.exports = class EthereumNetwork extends Network{
 		return {dst_address, dst_network, amount, src_hash, src_address, ticker};
 	}
 
-	async read_transfers(){
-		return [];
+	async read_claim(tx_hash){
+		console.trace(`Extracting claim_data for ${tx_hash} at ${this.caption}`);
+
+		try {
+			throw "Not implemented";
+			return null;
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
+
+	async read_transfers(src_address, src_hash, src_network, dst_address){
+		console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
+
+		try {
+			throw "Not implemented";
+			return true;
+		} catch(e){
+			console.error(e);
+			return false;
+		}
 	}
 
 	async read_state(){
@@ -60,5 +140,15 @@ module.exports = class EthereumNetwork extends Network{
  		let minted = [];
 
  		return {network_id, minted};
+	}
+
+	sign(msg){
+		try {
+			throw "Not implemented";
+			console.trace(`signing ${msg}`);
+		} catch(e){
+			console.error(e);
+			return false;
+		}
 	}
 }
