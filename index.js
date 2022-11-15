@@ -1,7 +1,6 @@
 let argv = require('yargs').argv;
 let Node = require('./validator.js');
 let fs = require('fs');
-let keys = require("./keys.json")
 
 
 const CONFIG_FILENAME = 'config.json';
@@ -32,7 +31,10 @@ let config = {
 			//"pubkey" : "02fd060ad909004756e8f29929a71ce2734de3ad394a99affd66a26706a292583d",
 			//"prvkey" : "2d25317fe918879e46abf9f8b475a60398c568dc074cbc94e78a5a94fc015c3f"
 			"ticker" : "0000000000000000000000000000000000000000000000000000000000000000",
-			"genesis" : keys.enecuum
+            "genesis" : {
+                "prvkey" : "",
+                "pubkey" : ""
+            }
 		},
 		{
 			"url" : "http://localhost:8017",
