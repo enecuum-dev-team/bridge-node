@@ -3,7 +3,7 @@ let cors = require('cors');
 let crypto = require('crypto');
 
 let EthereumNetwork = require('./provider_ethereum.js');
-let EnecuumNetwork = require('./provider_enecuum.js');
+//let EnecuumNetwork = require('./provider_enecuum.js');
 let TestNetwork = require('./provider_test.js');
 
 let calculate_transfer_id = function(ticket){
@@ -48,7 +48,7 @@ module.exports = class Node {
 			console.info(`Lock data for ${txHash} = ${JSON.stringify(lock)}`);
 
 			// choose destination network
-			let dst_network = config.networks.filter((network) => {return network.network_id === lock.dst_network})[0];
+			let dst_network = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(lock.dst_network)})[0];
 
 			if (dst_network === undefined){
 				console.error(`Failed to select destination network - ${lock.dst_network}`);
