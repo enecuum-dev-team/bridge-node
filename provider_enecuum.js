@@ -113,6 +113,11 @@ module.exports = class EnecuumNetwork extends Network {
         } while (status === null)
         return true
     }
+
+    async read_tx (tx_hash) {
+        let url = `${this.url}/api/v1/tx?hash=${tx_hash}`
+        return await http_get(url)
+    }
     
     async send_tx (type, parameters, model, prvkey) { 
         if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
@@ -170,6 +175,16 @@ module.exports = class EnecuumNetwork extends Network {
         await this.send_tx("claim_init", params, model, prvkey);
     }
 
+    async send_claim_confirm(params, prvkey) {
+        console.trace(`Sending claim_confirm with params ${JSON.stringify(params, null, "\t")} at ${this.caption}`);
+        const model = [
+            "validator_id",
+            "validator_sign",
+            "transfer_id",
+        ];
+        await this.send_tx("claim_confirm", params, model, prvkey);
+    }
+
     async wait_lock(tx_hash, time) {
         console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
         return await this.wait_tx(tx_hash, time)
@@ -178,6 +193,11 @@ module.exports = class EnecuumNetwork extends Network {
     async wait_claim(tx_hash, time) {
         console.trace(`Waiting for claim transaction ${tx_hash} at ${this.caption}`);
         return await this.wait_tx(tx_hash, time)
+    }
+
+    async read_claim(tx_hash) {
+        console.trace(`Reading claim transaction ${tx_hash} at ${this.caption}`);
+        return await read_tx(tx_hash)
     }
     
     async read_lock(tx_hash) {
@@ -200,19 +220,33 @@ module.exports = class EnecuumNetwork extends Network {
         return { dst_address, dst_network, amount, src_hash, src_address };
     }
 
-    async read_transfers() {
-        return [];
-    }
-
-    async read_state() {
+    async read_state(url) {
         console.trace(
             `Reading state of contract ${this.contract_address} at ${this.caption}`
         );
 
-        let network_id = "1";
-        let minted = [];
+        let network_id = await get_network_id(url);
+        let minted = await get_minted_tokens(url);
 
         return { network_id, minted };
+    }
+
+    async read_transfers () {
+        console.trace(`Reading enecuum network id`)
+        let transfers = await http_get(`${url}/api/v1/transfers`)
+        return transfers
+    }
+
+    async get_network_id (url=this.url) {
+        console.trace(`Reading enecuum network id`)
+        let net_id = await http_get(`${url}/api/v1/network_id`)
+        return net_id
+    }
+
+    async get_minted_tokens (url=this.url) {
+        console.trace(`Reading minted tokens. ${url}`)
+        let minted_tokens = await http_get(`${url}/api/v1/minted_token`)
+        return minted_tokens
     }
 
     async read_account (address, token, url=this.url){
