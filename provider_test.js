@@ -75,7 +75,7 @@ module.exports = class TestNetwork extends Network{
 		}
 	}
 
-	async send_claim(params){
+	async send_claim_init(params){
 		console.trace(`Sending claim with params ${JSON.stringify(params)} at ${this.caption}`);
 
 		try {
@@ -85,6 +85,11 @@ module.exports = class TestNetwork extends Network{
 			console.error(e);
 			return null;
 		}
+	}
+
+	async send_claim_confirm(params){
+		console.trace(`Sending idle`);
+		return 0;
 	}
 
 	async get_balance(address, hash){
@@ -122,6 +127,10 @@ module.exports = class TestNetwork extends Network{
 
 	async wait_claim(tx_hash){
 		console.trace(`Waiting for claim transaction ${tx_hash} at ${this.caption}`);
+
+		if (tx_hash === 0)
+			return true;
+
 		try {
 			let url = `${this.url}/api/v1/read_transaction?hash=${tx_hash}`;
 			let response = await http_get(url);

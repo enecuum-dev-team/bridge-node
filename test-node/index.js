@@ -2,7 +2,6 @@ let express = require('express');
 let cors = require('cors');
 let crypto = require('crypto');
 let fs = require('fs');
-
 let argv = require('yargs').argv;
 
 const CONFIG_FILENAME = 'config.json';
@@ -95,13 +94,13 @@ let get_amount = function(address, hash){
 let add_amount = function(address, hash, amount){
 	if (state.ledger[address]){
 		if (state.ledger[address][hash]){
-			state.ledger[address][hash] += amount;
+			state.ledger[address][hash] += Number(amount);
 		} else {
-			state.ledger[address][hash] = amount
+			state.ledger[address][hash] = Number(amount);
 		}
 	} else {
 		state.ledger[address] = {};
-		state.ledger[address][hash] = amount;
+		state.ledger[address][hash] = Number(amount);
 	}
 }
 

@@ -1,9 +1,12 @@
 let rsasign = require("jsrsasign");
-let ContractParser = require("../node-dev/contractParser").ContractParser;
-let Utils = require("../node-dev/Utils")
+let ContractParser = require("../node-dev/contractParser.js").ContractParser;
+//let Utils = require("../node-dev/Utils.js")
 let Network = require("./provider_abstract.js");
 let http = require("http");
 let request = require("request");
+let parser = require(`./dataParser.js`);
+let crypto = require('crypto');
+
 
 function ecdsa_sign(skey, msg) {
     var sig = new rsasign.Signature({ alg: "SHA256withECDSA" });
@@ -13,6 +16,23 @@ function ecdsa_sign(skey, msg) {
 
     sig.updateString(msg);
     return sig.sign();
+}
+
+let hash_tx_fields = function(tx){
+    if (!tx)
+        return undefined;
+    let model = ['amount','data','from','nonce','ticker','to'];
+    let str;
+    try{
+        str = model.map(v => crypto.createHash('sha256').update(tx[v].toString().toLowerCase()).digest('hex')).join("");
+    }
+    catch(e){
+        if (e instanceof TypeError) {
+            console.warn("Old tx format, skip new fields...");
+            return undefined;
+        }
+    }
+    return crypto.createHash('sha256').update(str).digest('hex');
 }
 
 let http_get = function (url) {
@@ -26,9 +46,9 @@ let http_get = function (url) {
 
             res.on("end", function () {
                 try {
-                    resolve(JSON.parse(data));
+                    resolve(data);
                 } catch (e) {
-                    reject();
+                    reject(e);
                 }
             });
         });
@@ -91,7 +111,9 @@ module.exports = class EnecuumNetwork extends Network {
         this.type = "enecuum";
         this.url = network_config.url;
         this.ticker = network_config.ticker;
-        this.genesis = network_config.genesis;
+        this.genesis_pubkey = network_config.genesis_pubkey;
+        this.prvkey = network_config.prvkey;
+        this.pubkey = network_config.pubkey;        
 
         if (network_config.type !== this.type) {
             console.fatal(
@@ -119,46 +141,67 @@ module.exports = class EnecuumNetwork extends Network {
         return await http_get(url)
     }
     
-    async send_tx (type, parameters, model, prvkey) { 
+    async send_tx (type, parameters, model) { 
         if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
             throw new Error(`Invalid 'parameters' object`);
-        let parser = new ContractParser(config)
-        let data = parser.dataFromObject({type, parameters})
+
+        let parser = new ContractParser(config);
+        let data = parser.dataFromObject({type, parameters});
+
         let tx = {
             amount : 1e8,
-            from : parameters.dst_address,
-            to : this.genesis.pubkey,
+            from : this.pubkey,
+            to : this.genesis_pubkey,
             data : data,
             nonce : Math.floor(Math.random() * 1e10),
             ticker : this.ticker
-        }
-        let hash = Utils.hash_tx_fields(tx)
-        tx.sign = Utils.ecdsa_sign(prvkey, hash)
+        };
+
+        let hash = hash_tx_fields(tx);
+        tx.sign = ecdsa_sign(this.prvkey, hash);
+
         try {
-            let res = (await http_post(`${this.url}/api/v1/tx`, [tx])).result;
-            if (res[0].status === 0)
-                return res[0].hash
-            else 
-                return null
+            let res = await http_post(`${this.url}/api/v1/tx`, [tx]);
+            console.trace(`tx post result = ${JSON.stringify(res)}`);
+            if (res.err){
+                console.error(res.message);
+                return null;
+            } else {
+                return res.result[0].hash;
+            }
         } catch (error) {
-            console.log(error);
+            console.error(error);
             return null;
         }
     }
 
-    async send_lock(params, prvkey) {
-        console.trace(`Sending lock with params ${JSON.stringify(params, null, "\t")} at ${this.caption}`);
+    async send_lock(params) {
+        console.trace(`Sending lock with params ${JSON.stringify(params)} at ${this.caption}`);
         const model = [
             "dst_address",
             "dst_network",
             "amount",
             "hash"
         ];
-        return await this.send_tx("token_send_over_bridge", params, model, prvkey);
+
+        let args = {};
+
+        args.dst_address = params.dst_address;
+        args.dst_network = Number(params.dst_network);
+        args.amount = params.amount.toString();
+        args.hash = params.src_hash;
+
+        try {
+            console.trace(`args = ${JSON.stringify(args)}`);
+            return await this.send_tx("token_send_over_bridge", args, model);
+        } catch(e){
+            console.error(e);
+            return null;
+        }
     }
     
-    async send_claim(params, prvkey) {
-        console.trace(`Sending claim with params ${JSON.stringify(params, null, "\t")} at ${this.caption}`);
+    async send_claim_init(params) {
+        console.trace(`Sending claim with params ${JSON.stringify(params/*, null, "\t"*/)} at ${this.caption}`);
         const model = [
             "dst_address",
             "dst_network",
@@ -172,88 +215,220 @@ module.exports = class EnecuumNetwork extends Network {
             "transfer_id",
             "ticker",
         ];
-        await this.send_tx("claim_init", params, model, prvkey);
+
+        let args = {};
+
+        args = Object.assign(args, params.ticket);
+
+        args.amount = args.amount.toString();
+        //args.amount = BigInt(args.amount);
+        args.transfer_id = params.transfer_id;
+        args.dst_network = Number(args.dst_network);
+        //args.dst_address = '02375a89c4cd7a7410fcf90c6b144d82ea48c03e96d9c335b63627300771e672';
+
+        console.trace(`args = ${JSON.stringify(args)}`);
+
+        try {
+            return await this.send_tx("claim_init", args, model);
+        } catch(e){
+            console.error(e);
+            return null;
+        }
     }
 
     async send_claim_confirm(params, prvkey) {
-        console.trace(`Sending claim_confirm with params ${JSON.stringify(params, null, "\t")} at ${this.caption}`);
+        console.trace(`Sending claim_confirm with params ${JSON.stringify(params)} at ${this.caption}`);
         const model = [
             "validator_id",
             "validator_sign",
             "transfer_id",
         ];
-        await this.send_tx("claim_confirm", params, model, prvkey);
+
+        let args = {};
+
+        args.validator_id = params.validator_id;
+        args.validator_sign = params.validator_sign;
+        args.transfer_id = params.transfer_id;
+
+        try {
+            return await this.send_tx("claim_confirm", args, model);
+        } catch(e){
+            console.error(e);
+            return null;
+        }
     }
 
-    async wait_lock(tx_hash, time) {
+    async wait_lock(tx_hash) {
         console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
-        return await this.wait_tx(tx_hash, time)
+        
+        try {
+            let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;            
+            let response = await http_get(url);
+
+            response = JSON.parse(response);
+            if (response.status === 3){
+                return true;
+            } else {
+                return false;
+            }
+        } catch(e){
+            return false;
+        }
     }
     
-    async wait_claim(tx_hash, time) {
-        console.trace(`Waiting for claim transaction ${tx_hash} at ${this.caption}`);
-        return await this.wait_tx(tx_hash, time)
+    async wait_claim(tx_hash) {
+        console.trace(`Waiting for transaction ${tx_hash} at ${this.caption}`);
+        
+        try {
+            let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
+
+            let response = await http_get(url);
+            response = JSON.parse(response);
+            if (response.status === 3){
+                return true;
+            } else {
+                return false;
+            }
+        } catch(e){
+            return false;
+        }
     }
 
     async read_claim(tx_hash) {
         console.trace(`Reading claim transaction ${tx_hash} at ${this.caption}`);
-        return await read_tx(tx_hash)
+
+        try {
+            let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
+
+            let tx_info = await http_get(url);
+            tx_info = JSON.parse(tx_info);
+            if (tx_info.status === 3){
+                let parser = new ContractParser(config);
+                let parsed_data = parser.parse(tx_info.data);                
+                return parsed_data.parameters;
+            } else {
+                console.error(`Bad tx status`);
+                return null;
+            }
+        } catch(e){
+            console.error(e);
+            return null;
+        }
     }
     
     async read_lock(tx_hash) {
-        let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
-        let tx_info = await http_get(url);
-        console.debug(tx_info);
+        console.trace(`Reading state lock for hash ${tx_hash} at ${this.caption}`);
 
-        let parser = new ContractParser(config);
+        try{
+            let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
+            let tx_info = await http_get(url);
+            tx_info = JSON.parse(tx_info);
+            console.trace(tx_info);
 
-        let params = parser.parse(tx_info.data);
+            let parser = new ContractParser(config);
 
-        console.trace(params);
+            let params = parser.parse(tx_info.data);
 
-        let dst_address = params.dst_address;
-        let dst_network = params.dst_network;
-        let amount = params.amount;
-        let src_hash = params.src_hash;
-        let src_address = params.src_address;
+            console.trace(JSON.stringify(params));
 
-        return { dst_address, dst_network, amount, src_hash, src_address };
+            if (params.type === 'token_send_over_bridge'){
+                let dst_address = params.parameters.dst_address;
+                let dst_network = params.parameters.dst_network;
+                let amount = params.parameters.amount;
+                let src_hash = params.parameters.hash;
+                let src_address = tx_info.from;
+
+                let result = { dst_address, dst_network, amount, src_hash, src_address };
+
+                console.trace(`result = ${JSON.stringify(result)}`);
+
+                return result;
+            } else {
+                throw `Wrong smart contract type - ${params.type}`;
+            }
+        } catch(e) {
+            console.error(e);
+            return null;
+        }
     }
 
     async read_state(url) {
-        console.trace(
-            `Reading state of contract ${this.contract_address} at ${this.caption}`
-        );
+        console.trace(`Reading state of contract ${this.contract_address} at ${this.caption}`);
 
-        let network_id = await get_network_id(url);
-        let minted = await get_minted_tokens(url);
+        let network_id, minted;
+
+        try {
+            network_id = await this.get_network_id(url);
+        } catch(e){
+            console.error(e);
+        }
+
+        try {
+            minted = await this.get_minted_tokens(url);
+        } catch(e){
+            minted = [];
+            console.error(e);
+        }
 
         return { network_id, minted };
     }
 
-    async read_transfers () {
-        console.trace(`Reading enecuum network id`)
-        let transfers = await http_get(`${url}/api/v1/transfers`)
-        return transfers
+    async read_transfers (src_address, src_hash, src_network, dst_address) {
+        console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
+
+        try {
+            let url = `${this.url}/api/v1/transfers`;
+            let response = await http_get(url);
+
+            console.trace(`response = '${response}'`);
+
+            let result = JSON.parse(response);
+
+            if (!Array.isArray(result)){
+                console.warn(`get ${url} returned wrong response - array expected`);
+                return null;
+            }
+
+            if (result.length < 2){
+                return result;
+            } else {
+                console.warn(`result should be empty or single-element array`)
+                return null;
+            }
+        } catch(e){
+            console.warn(e);
+            return null;
+        }
     }
 
     async get_network_id (url=this.url) {
-        console.trace(`Reading enecuum network id`)
-        let net_id = await http_get(`${url}/api/v1/network_id`)
-        return net_id
+        console.trace(`Reading enecuum network id at ${url}`);
+        let net_id = await http_get(`${url}/api/v1/network_id`);
+        return net_id;
     }
 
     async get_minted_tokens (url=this.url) {
-        console.trace(`Reading minted tokens. ${url}`)
-        let minted_tokens = await http_get(`${url}/api/v1/minted_token`)
-        return minted_tokens
+        console.trace(`Reading minted tokens at ${url}`)
+        let minted_tokens = await http_get(`${url}/api/v1/minted_token`);
+        return JSON.parse(minted_tokens);
     }
 
-    async read_account (address, token, url=this.url){
+    async get_balance (address, token){
         console.trace(`Reading account ${address} at ${this.caption}`);
 		try {
-            let response = await http_get(`${url}/api/v1/balance?id=${address}${token ? `&${token}` : ""}`);
-			return response.amount;
+            if (token === undefined){
+                return {};
+            } else {
+                let url = `${this.url}/api/v1/balance?id=${address}&token=${token}`;
+                console.trace(url);
+                let response = await http_get(url);
+                response = JSON.parse(response);
+                console.trace(response);
+
+                let result = {};
+                result[token] = response.amount;
+    			return result;
+            }
 		} catch(e) {
 			console.error(e);
 			return null;

@@ -3,7 +3,7 @@ let cors = require('cors');
 let crypto = require('crypto');
 
 let EthereumNetwork = require('./provider_ethereum.js');
-//let EnecuumNetwork = require('./provider_enecuum.js');
+let EnecuumNetwork = require('./provider_enecuum.js');
 let TestNetwork = require('./provider_test.js');
 
 let calculate_transfer_id = function(ticket){
@@ -99,12 +99,18 @@ module.exports = class Node {
 			} else {
 				ticket.origin_hash = ticket.src_hash;
 				ticket.origin_network = ticket.src_network;
-				ticket.ticker = "wr" + lock.ticker;
+				if (!lock.ticker){
+					console.warn(`lock.ticker not specified`);
+					ticket.ticker = "DUMMY";
+				} else {
+					ticket.ticker = "" + lock.ticker;
+				}
 			}
 
 			//  from destination
 			if (transfer[0]){
-				ticket.nonce = transfer[0].nonce + 1;
+				console.silly(`incrementing transfer nonce ${transfer[0].nonce}`);
+				ticket.nonce = Number(transfer[0].nonce) + 1;
 			} else {
 				ticket.nonce = 1;
 			}

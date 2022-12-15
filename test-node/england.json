@@ -1,11 +1,11 @@
 {
 	"tokens": [{
-		"hash": "POUND_HASH",
-		"ticker": "POUND"
+		"hash": "1704",
+		"ticker": "PND"
 	}],
 	"ledger": {
-		"ALICE":{
-			"POUND_HASH":1000
+		"1702":{
+			"1704":10000
 		}
 	}
 }
