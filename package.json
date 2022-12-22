@@ -4,7 +4,7 @@
     "description": "Tabula bridge node",
     "main": "index.js",
     "scripts": {
-        "test": "mocha"
+        "test": "node node_modules/mocha/bin/_mocha"
     },
     "author": "kzhidanov",
     "license": "MIT",

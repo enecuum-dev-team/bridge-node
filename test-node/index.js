@@ -51,6 +51,7 @@ let transfers = [];
 let state = {
 	tokens :[],
 	ledger :{},
+	known_networks: [],
 }
 
 try {
@@ -114,17 +115,25 @@ app.post('/api/v1/lock', async (req, res) => {
 		let tx_hash = random_hash();
 
 		setTimeout(function(){
-			if (get_amount(src_address, src_hash) >= amount){
 
-				add_amount(src_address, src_hash, -1 * amount);
-				add_amount(SMART_ADDRESS, src_hash, amount);
+			let dst_network_info = state.known_networks.find(n => n.id === dst_network);
 
-				transactions[tx_hash] = {dst_address, dst_network, amount, src_hash, src_address};
-
-				console.info(`assets locked successfully`);
-			} else {
-				console.error(`not enough funds at account ${src_address}`);
+			if (dst_network_info === undefined){
+				console.error(`Unknown network - ${dst_network}`)
 				transactions[tx_hash] = null;
+			} else {
+				if (get_amount(src_address, src_hash) >= amount){
+
+					add_amount(src_address, src_hash, -1 * amount);
+					add_amount(SMART_ADDRESS, src_hash, amount);
+
+					transactions[tx_hash] = {dst_address, dst_network, amount, src_hash, src_address};
+
+					console.info(`assets locked successfully`);
+				} else {
+					console.error(`not enough funds at account ${src_address}`);
+					transactions[tx_hash] = null;
+				}
 			}
 		}, config.tx_confirmation_delay);
 
@@ -204,7 +213,9 @@ app.post('/api/v1/claim', async (req, res) => {
 
 app.get('/api/v1/network_id', async (req, res) => {
 	console.trace('on network_id', req.body);
-	res.send({network_id:config.network_id});
+	let response = {network_id:config.network_id};
+	console.trace(response);
+	res.send(response);
 });
 
 app.get('/api/v1/transfers', async (req, res) => {
@@ -217,6 +228,25 @@ app.get('/api/v1/transfers', async (req, res) => {
 		let tuple = transfers.filter((t) => {return (t.src_hash === src_hash) && (t.src_address === src_address) && (t.dst_address === dst_address) && (t.src_network.toString() === src_network);});
 
 		result = {err:0, result:tuple};
+	} catch(e){
+		console.warn(e.toString());
+		result = {err:1};
+	}
+
+	console.trace(`result = ${JSON.stringify(result)}`);
+	res.send(result);
+});
+
+app.get('/api/v1/token_info', async (req, res) => {
+	console.trace('on token_info', req.query);
+	let result;
+
+	try {
+		let {hash} = req.query;
+
+		let token = state.tokens.filter((t) => {return (t.hash === hash)});
+
+		result = {err:0, result:token[0]};
 	} catch(e){
 		console.warn(e.toString());
 		result = {err:1};
@@ -244,6 +274,15 @@ app.get('/api/v1/read_transaction', async (req, res) => {
 app.get('/api/v1/minted', async (req, res) => {
 	console.trace('on minted', req.body);
 	res.send(minted);
+});
+
+app.get('/api/v1/known_networks', async (req, res) => {
+	console.trace('on known_networks', req.body);
+	if (state.known_networks){
+		res.send(state.known_networks);
+	} else {
+		res.send([]);
+	}
 });
 
 app.get('/api/v1/account', async (req, res) => {

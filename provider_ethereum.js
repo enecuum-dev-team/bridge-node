@@ -122,6 +122,28 @@ module.exports = class EthereumNetwork extends Network{
 		}
 	}
 
+	async get_token_info(hash){
+		console.trace(`Reading token_info for ${hash} at ${this.caption}`);
+
+		try {
+			throw "not implemented";
+			let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
+			if (response.err === 0){
+				let result = {};
+				result.decimals = response.result.decimals;
+				result.ticker = response.result.ticker;
+				
+				return result;
+			} else {
+				console.error(`failed to get token data`);
+				return null;
+			}
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
 	async wait_lock(tx_hash){
 		console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
 		try {

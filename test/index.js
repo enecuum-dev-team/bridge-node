@@ -1,6 +1,7 @@
 let assert = require('assert');
 let request = require('request');
 let argv = require('yargs').argv;
+let fs = require('fs');
 
 let EthereumNetwork = require('../provider_ethereum.js');
 let EnecuumNetwork = require('../provider_enecuum.js');
@@ -18,8 +19,9 @@ console.fatal = function (...msg) {
 };
 require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss', level: 'silly', extend:{fatal:0, debug:4, trace:5, silly:6}, include:['silly', 'trace','debug','info','warn','error','fatal']});
 
-const CONFIG_FILENAME = 'config.json';
+const CONFIG_FILENAME = `config.json`;
 let config = {
+  tx_confirmation_delay_ms: 30000,
   validators : [{url:"http://localhost:8080/api/v1/notify"}],
 
   england: {"url" : "http://localhost:8017", "type" : "test", "caption" : "test_1"},
@@ -43,10 +45,11 @@ console.info('Loading config from', config_filename, '...');
 
 let cfg = {};
 try {
-  cfg = JSON.parse(fs.readFileSync(config_filename, 'utf8'));
+  let content = fs.readFileSync(config_filename, 'utf8');
+  cfg = JSON.parse(content);
   config = Object.assign(config, cfg);
 } catch (e) {
-  console.info('No configuration file found')
+  console.info(`Failed to load config - ${JSON.stringify(e)}`);
 }
 
 config = Object.assign(config, argv);
@@ -95,8 +98,9 @@ let wait_for = async function(method, args, condition, timeout_ms){
   let result;
 
   let start = new Date();
-  let span = timeout_ms;
+  //let span = timeout_ms;
 
+  let span;
   do {
     response = await method(...args);
 
@@ -107,10 +111,10 @@ let wait_for = async function(method, args, condition, timeout_ms){
     }
 
     now = new Date();
-    span -= ((now - start) / 10);
-  } while (span > 0);
+    span = now - start;
+  } while (span < timeout_ms);
 
-  console.log('wait end');
+  console.warn('wait timeout reached');
 
   return null;
 };
@@ -128,20 +132,22 @@ let http_post = function(url, json){
         });
 };
 
-let balance_diff = function(old_balance, new_balance){
+let balance_diff = function(old_balance, new_balance, exclude = []){
   let diff = {};
     for (let n in new_balance){
-      let f = false;
-      for (let o in old_balance)
-        if (n === o){
-          f = true;
-          if (old_balance[n] !== new_balance[n])
-            diff[n] = new_balance[n] - old_balance[n];
+      if (exclude.every(h => h !== n)){
+        let f = false;
+        for (let o in old_balance)
+          if (n === o){
+            f = true;
+            if (old_balance[n] !== new_balance[n])
+              diff[n] = new_balance[n] - old_balance[n];
+          }
+        
+        if (!f){
+  //        console.log(`updating diff ${n} with ${new_balance[n]}`);
+          diff[n] = new_balance[n];
         }
-      
-      if (!f){
-//        console.log(`updating diff ${n} with ${new_balance[n]}`);
-        diff[n] = new_balance[n];
       }
     }
     return diff;
@@ -163,8 +169,12 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
     console.debug(`Waiting for approve of ${lock_hash}`);
-    let lock_result = await wait_for(src_provider.wait_lock.bind(src_provider), [lock_hash], (r) => {return r === true}, 30000);
+    let lock_result = await wait_for(src_provider.wait_lock.bind(src_provider), [lock_hash], (r) => {return r === true}, config.tx_confirmation_delay_ms);
     assert(lock_result !== null, 'Failed to approve lock');
+
+    console.debug(`Reading lock data of ${lock_hash}`);
+    let lock_data = await src_provider.read_lock(lock_hash);
+    assert(lock_data !== null, `Lock data must be not null`);
 
     console.debug(`Checking balance of ${src_address} at ${src_network}`);
     let new_sender = await src_provider.get_balance(src_address, src_hash);
@@ -187,7 +197,7 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     assert(claim_init_hash !== null, 'Failed to send claim init transaction');
 
     console.debug(`Waiting for approve of claim init ${claim_init_hash}`);
-    let claim_init_result = await wait_for(dst_provider.wait_claim.bind(dst_provider), [claim_init_hash], (r) => {return r === true}, 30000);
+    let claim_init_result = await wait_for(dst_provider.wait_claim.bind(dst_provider), [claim_init_hash], (r) => {return r === true}, config.tx_confirmation_delay_ms);
     assert(claim_init_result !== null, 'Failed to approve claim init');
 
     console.debug(`Claim confirm ${JSON.stringify(ticket)} at ${dst_network}`);
@@ -195,7 +205,7 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     assert(claim_confirm_hash !== null, 'Failed to send claim confirm transaction');
 
     console.debug(`Waiting for approve of claim confirm ${claim_confirm_hash}`);
-    let claim_confirm_result = await wait_for(dst_provider.wait_claim.bind(dst_provider), [claim_confirm_hash], (r) => {return r === true}, 30000);
+    let claim_confirm_result = await wait_for(dst_provider.wait_claim.bind(dst_provider), [claim_confirm_hash], (r) => {return r === true}, config.tx_confirmation_delay_ms);
     assert(claim_confirm_result !== null, 'Failed to approve claim confirm');
 
     console.debug(`Parsing claim ${claim_init_hash}`);
@@ -207,8 +217,10 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     let new_receiver = await dst_provider.get_balance(dst_address, claim_data.dst_hash);
     console.info(`new receiver = ${JSON.stringify(new_receiver)}`);
 
-    let receiver_diff = balance_diff(old_receiver, new_receiver);
+    let exclude = ['0000000000000000000000000000000000000000000000000000000000000000'];
+    let receiver_diff = balance_diff(old_receiver, new_receiver, exclude);
     console.info(`receiver_diff = ${JSON.stringify(receiver_diff)}`);
+    assert(Object.values(receiver_diff).length === 1, `Receiver must have changed exactly one value (excluding ${JSON.stringify(exclude)}), has ${Object.values(receiver_diff).length}`);
     assert(BigInt(Object.values(receiver_diff)[0]) === BigInt(amount), `Receiver amount must increase`);
 
     let dst_hash = Object.keys(receiver_diff)[0];
@@ -236,7 +248,7 @@ describe('happy_case_1', function () {
   it('forward test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
-    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 303, MEXICO, JOSE_PUBKEY);
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 304, MEXICO, JOSE_PUBKEY);
   });
 
   it('backward test', async function() {
@@ -297,5 +309,38 @@ describe('happy_case_1', function () {
     assert(POUND === bridge5.dst_hash, "Circular transfer must unlock, not mint");
 
     return 0;
+  });
+
+  it('unkonwn network test', async function () {
+    console.log(`===== GERMANY TO MEXICO =========================================`);
+
+    let src_network_obj = GERMANY;
+    let src_address = HANS_PUBKEY;
+    let src_hash = MARK;
+    let amount = 50;
+    let dst_network_obj = MEXICO;
+    let dst_address = JOSE_PUBKEY;
+
+    let src_provider = src_network_obj.provider;
+    let dst_provider = dst_network_obj.provider;
+    let src_network = src_network_obj.id;
+    let dst_network = dst_network_obj.id;
+
+
+    console.debug(`Checking balance of ${src_address} at ${src_network}`);
+    let old_sender = await src_provider.get_balance(src_address, src_hash);
+    console.info(`old sender = ${JSON.stringify(old_sender)}`);
+
+    console.debug('Alice sending transaction...')
+    let lock_hash = await src_provider.send_lock({dst_address, dst_network, amount, src_hash, src_address});
+    assert(lock_hash !== null, 'Failed to send lock transaction');
+
+    console.debug(`Waiting for approve of ${lock_hash}`);
+    let lock_result = await wait_for(src_provider.wait_lock.bind(src_provider), [lock_hash], (r) => {return r === true}, config.tx_confirmation_delay_ms);
+    assert(lock_result !== null, 'Failed to approve lock');
+
+    console.debug(`Reading lock data of ${lock_hash}`);
+    let lock_data = await src_provider.read_lock(lock_hash);
+    assert(lock_data === null, `Lock data must be null got ${lock_data} instead`);
   });
 });

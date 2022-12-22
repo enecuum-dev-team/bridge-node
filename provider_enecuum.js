@@ -7,7 +7,6 @@ let request = require("request");
 let parser = require(`./dataParser.js`);
 let crypto = require('crypto');
 
-
 function ecdsa_sign(skey, msg) {
     var sig = new rsasign.Signature({ alg: "SHA256withECDSA" });
     let sigdata = { d: skey, curve: "secp256k1" };
@@ -75,33 +74,33 @@ let http_post = function (url, json) {
 
 let config = {
     contract_pricelist: {
-        create_token: 20000000000,
-        create_pos: 0,
-        delegate: 0,
-        undelegate: 0,
-        transfer: 0,
-        pos_reward: 0,
-        mint: 0,
-        burn: 0,
-        custom: 20000000000,
-        pool_create: 0,
-        pool_add_liquidity: 0,
-        pool_remove_liquidity: 0,
-        pool_sell_exact: 0,
-        farm_create: 0,
-        farm_get_reward: 0,
-        farm_increase_stake: 0,
-        farm_decrease_stake: 0,
-        farm_close_stake: 0,
-        farm_add_emission: 0,
-        dex_cmd_distribute: 0,
-        pool_sell_exact_routed: 0,
-        pool_buy_exact: 0,
-        pool_buy_exact_routed: 0,
-        token_send_over_bridge: 0,
-        claim_init: 0,
-        claim_confirm: 0,
-        claim: 0,
+        "create_token" :    20000000000,
+        "create_pos" :      0,
+        "delegate" :        0,
+        "undelegate" :      0,
+        "transfer" :        0,
+        "pos_reward" :      0,
+        "mint" :            0,
+        "burn" :            0,
+        "custom" :          20000000000,
+        "pool_create" :     0,
+        "pool_add_liquidity" :      0,
+        "pool_remove_liquidity" :   0,
+        "pool_sell_exact" :         0,
+        "farm_create" :             0,
+        "farm_get_reward" :         0,
+        "farm_increase_stake" :     0,
+        "farm_decrease_stake" :     0,
+        "farm_close_stake" :        0,
+        "farm_add_emission" :       0,
+        "dex_cmd_distribute" :      0,
+        "pool_sell_exact_routed" :  0,
+        "pool_buy_exact" :          0,
+        "pool_buy_exact_routed" :   0,
+        "lock" :                    0,
+        "claim_init" :              0,
+        "claim_confirm" :           0,
+        "claim" :                   0
     },
 };
 
@@ -161,6 +160,7 @@ module.exports = class EnecuumNetwork extends Network {
         tx.sign = ecdsa_sign(this.prvkey, hash);
 
         try {
+            console.trace(`Sending ${JSON.stringify(tx)}`);
             let res = await http_post(`${this.url}/api/v1/tx`, [tx]);
             console.trace(`tx post result = ${JSON.stringify(res)}`);
             if (res.err){
@@ -193,7 +193,7 @@ module.exports = class EnecuumNetwork extends Network {
 
         try {
             console.trace(`args = ${JSON.stringify(args)}`);
-            return await this.send_tx("token_send_over_bridge", args, model);
+            return await this.send_tx("lock", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -331,7 +331,7 @@ module.exports = class EnecuumNetwork extends Network {
 
             console.trace(JSON.stringify(params));
 
-            if (params.type === 'token_send_over_bridge'){
+            if (params.type === 'lock'){
                 let dst_address = params.parameters.dst_address;
                 let dst_network = params.parameters.dst_network;
                 let amount = params.parameters.amount;
@@ -377,7 +377,8 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
 
         try {
-            let url = `${this.url}/api/v1/transfers`;
+            let url = `${this.url}/api/v1/transfers?dst_address=${dst_address}`;
+            console.trace(`url = ${url}`);
             let response = await http_get(url);
 
             console.trace(`response = '${response}'`);
@@ -404,7 +405,7 @@ module.exports = class EnecuumNetwork extends Network {
     async get_network_id (url=this.url) {
         console.trace(`Reading enecuum network id at ${url}`);
         let net_id = await http_get(`${url}/api/v1/network_id`);
-        return net_id;
+        return Number(net_id);
     }
 
     async get_minted_tokens (url=this.url) {
@@ -416,23 +417,51 @@ module.exports = class EnecuumNetwork extends Network {
     async get_balance (address, token){
         console.trace(`Reading account ${address} at ${this.caption}`);
 		try {
-            if (token === undefined){
-                return {};
-            } else {
-                let url = `${this.url}/api/v1/balance?id=${address}&token=${token}`;
-                console.trace(url);
-                let response = await http_get(url);
-                response = JSON.parse(response);
-                console.trace(response);
+            //let url = `${this.url}/api/v1/balance?id=${address}&token=${token}`;
+            let url = `${this.url}/api/v1/balance_all?id=${address}`;
+            console.trace(`url = ${url}`);
+            let response = await http_get(url);
+            response = JSON.parse(response);
+            console.trace(`response = ${JSON.stringify(response)}`);
 
-                let result = {};
-                result[token] = response.amount;
-    			return result;
-            }
+            let result = {};
+            response.forEach(t => {
+                result[t.token] = t.amount;
+            });
+			return result;
 		} catch(e) {
 			console.error(e);
 			return null;
 		}
+    }
+
+    async get_token_info(hash){
+        console.trace(`Reading token_info for ${hash} at ${this.caption}`);
+
+        try {
+            let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
+            console.trace(`response = ${response}`);
+            response = JSON.parse(response);
+            if (response.length === 1){
+                let result = {};
+                result.decimals = response[0].decimals;
+                result.ticker = response[0].ticker;
+                
+                return result;
+            } else {
+                console.error(`failed to get token data`);
+                return null;
+            }
+        } catch(e){
+            console.error(e);
+            return null;
+        }
+    }
+
+    create_ticker_from(origin_ticker){
+        console.trace(`Creating new ticker from string ${origin_ticker}`);
+        let result = origin_ticker.substring(0, 5);
+        return result;
     }
 
     sign(msg) {

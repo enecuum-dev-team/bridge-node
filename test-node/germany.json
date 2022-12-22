@@ -1,11 +1,16 @@
 {
 	"tokens": [{
 		"hash": "290001",
-		"ticker": "MRK"
+		"ticker": "MRK",
+		"decimals": 2
 	}],
 	"ledger": {
 		"2901":{
 			"290001":10000
 		}
-	}
+	},
+	"known_networks":[
+		{"id":1, "decimals":10},
+		{"id":17, "decimals":2}
+	]
 }

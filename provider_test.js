@@ -109,6 +109,27 @@ module.exports = class TestNetwork extends Network{
 		}
 	}
 
+	async get_token_info(hash){
+		console.trace(`Reading token_info for ${hash} at ${this.caption}`);
+
+		try {
+			let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
+			if (response.err === 0){
+				let result = {};
+				result.decimals = response.result.decimals;
+				result.ticker = response.result.ticker;
+
+				return result;
+			} else {
+				console.error(`failed to get token data`);
+				return null;
+			}
+		} catch(e){
+			console.error(e);
+			return null;
+		}
+	}
+
 	async wait_lock(tx_hash){
 		console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
 		try {
@@ -236,7 +257,20 @@ module.exports = class TestNetwork extends Network{
 			console.error(e);
 		}
 
- 		return {network_id, minted};
+		let known_networks = null;
+		try {
+			known_networks = await http_get(`${this.url}/api/v1/known_networks`);
+		} catch(e){
+			console.error(e);
+		}
+
+ 		return {network_id, minted, known_networks};
+	}
+
+	create_ticker_from(origin_ticker){
+		console.trace(`Creating new ticker from string ${origin_ticker}`);
+		let result = origin_ticker.substring(0, 3);
+		return result;
 	}
 
 	sign(msg){

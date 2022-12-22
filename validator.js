@@ -47,6 +47,16 @@ module.exports = class Node {
 			}
 			console.info(`Lock data for ${txHash} = ${JSON.stringify(lock)}`);
 
+			// reading locked token info
+			console.info(`Checking token info for ${lock.src_hash} at ${src_network.caption}...`);
+			let token_info = await src_network.provider.get_token_info(lock.src_hash);
+			if (!token_info){
+				console.error(`Failed to read token_info for ${lock.src_hash}`);
+				res.send({err:1});
+				return;
+			}
+			console.info(`Token info for ${lock.src_hash} = ${JSON.stringify(token_info)}`);
+
 			// choose destination network
 			let dst_network = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(lock.dst_network)})[0];
 
@@ -79,10 +89,13 @@ module.exports = class Node {
 			//creating confirmation
 			let ticket = {};
 
+			//  calculating amount
+			//ticket.amount = lock.amount * 10n ** BigInt(token_info.decimals);
+			ticket.amount = lock.amount;
+
 			//	from lock
 			ticket.dst_address = lock.dst_address;
 			ticket.dst_network = lock.dst_network;
-			ticket.amount = lock.amount;
 			ticket.src_hash = lock.src_hash;
 			ticket.src_address = lock.src_address;
 
@@ -92,19 +105,13 @@ module.exports = class Node {
 			let minted_data = src_state.minted.find((minted)=>{console.silly(`${JSON.stringify(minted)}, ${lock.src_hash}`); return minted.wrapped_hash === lock.src_hash});
 			console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
+			ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;
 				ticket.origin_network = minted_data.origin_network;
-				ticket.ticker = "DUMMY";
 			} else {
 				ticket.origin_hash = ticket.src_hash;
 				ticket.origin_network = ticket.src_network;
-				if (!lock.ticker){
-					console.warn(`lock.ticker not specified`);
-					ticket.ticker = "DUMMY";
-				} else {
-					ticket.ticker = "" + lock.ticker;
-				}
 			}
 
 			//  from destination

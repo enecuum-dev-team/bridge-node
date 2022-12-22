@@ -1,11 +1,16 @@
 {
 	"tokens": [{
 		"hash": "1704",
-		"ticker": "PND"
+		"ticker": "PND",
+		"decimals": 2
 	}],
 	"ledger": {
 		"1702":{
 			"1704":10000
 		}
-	}
+	},
+	"known_networks":[
+		{"id":23, "decimals":3},
+		{"id":29, "decimals":4}
+	]
 }
