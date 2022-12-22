@@ -29,7 +29,7 @@
       "script": "index.js",
       "watch": true,
       "ignore_watch": ["log", ".idea"],
-      "args": "--port 8080",
+      "args": "--config config.json.example --port 8080",
       "merge_logs": true,
       "log_file" : "log/germany.log"
     }]
