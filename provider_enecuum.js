@@ -4,7 +4,7 @@ let ContractParser = require("../node-dev/contractParser.js").ContractParser;
 let Network = require("./provider_abstract.js");
 let http = require("http");
 let request = require("request");
-let parser = require(`./dataParser.js`);
+//let parser = require(`./dataParser.js`);
 let crypto = require('crypto');
 
 function ecdsa_sign(skey, msg) {
