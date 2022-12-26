@@ -17,7 +17,15 @@ let erc20_abi = [
     name:"decimals",
     outputs:[{"name":"","type":"uint8"}],
     type:"function"
-  }
+  },
+  // symbol
+  {
+    constant: true,
+    inputs: [],
+    name: "symbol",
+    outputs: [{"name": "","type": "string"}],
+    type: "function"
+    }
 ];
 
 module.exports = class EthereumNetwork extends Network{
@@ -42,10 +50,12 @@ module.exports = class EthereumNetwork extends Network{
 		try {
 			let {dst_address, dst_network, amount, src_hash, src_address} = params;
 
+			//let eth_balance = await web3.eth.getBalance(`this.pubkey`);
+
 			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
 			let lock_tx = bridge_contract.methods.lock(Buffer.from(dst_address), dst_network, amount, src_hash);
 
-			let est_gas = 10000000;
+			let est_gas = 300000;
 
 			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address, data:lock_tx.encodeABI(), gas:est_gas}, this.prvkey);
 			console.trace(`tx = ${JSON.stringify(tx)}`);
@@ -126,18 +136,16 @@ module.exports = class EthereumNetwork extends Network{
 		console.trace(`Reading token_info for ${hash} at ${this.caption}`);
 
 		try {
-			throw "not implemented";
-			let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
-			if (response.err === 0){
-				let result = {};
-				result.decimals = response.result.decimals;
-				result.ticker = response.result.ticker;
-				
-				return result;
-			} else {
-				console.error(`failed to get token data`);
-				return null;
-			}
+		  let token_contract = new this.web3.eth.Contract(erc20_abi, hash);
+  		let ticker = await token_contract.methods.symbol().call();
+  		let decimals = await token_contract.methods.decimals().call();
+
+  		let result = {ticker, decimals};
+
+  		console.trace(`result = ${result}`);
+
+  		return result;
+
 		} catch(e){
 			console.error(e);
 			return null;
@@ -271,6 +279,12 @@ module.exports = class EthereumNetwork extends Network{
  		let minted = [];
 
  		return {network_id, minted};
+	}
+
+	create_ticker_from(origin_ticker){
+		console.trace(`Creating new ticker from string ${origin_ticker}`);
+		let result = origin_ticker.substring(0, 3);
+		return result;
 	}
 
 	sign(msg){

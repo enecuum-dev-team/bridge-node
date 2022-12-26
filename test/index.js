@@ -245,7 +245,7 @@ describe('happy_case_1', function () {
     console.log('Update complete');
   });
 
-  it('forward test', async function() {
+  it.only('forward test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
     let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 304, MEXICO, JOSE_PUBKEY);

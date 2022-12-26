@@ -3,7 +3,7 @@
 		{
       "url" : "https://goerli.infura.io/v3/3fc3a01d3c4544b5a4ba1bea928c62a0",
       "type" : "ethereum",
-      "contract_address" : "0x7c3a4c41b35b8a0dF05dCe6B885d6D4c91e5d524",
+      "contract_address" : "0xD780E08ca4F8b20108494068d25A1422677B5B5A",
       "caption" : "GOERLI",
       "pubkey" : "",
       "prvkey" : "4d7c91407e5954e6b80e2c5f3658363452cf932b3a74fa4703472a7978960302",
