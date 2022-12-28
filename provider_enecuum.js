@@ -535,7 +535,7 @@ module.exports = class EnecuumNetwork extends Network {
 
     create_ticker_from(origin_ticker){
         console.trace(`Creating new ticker from string ${origin_ticker}`);
-        let result = origin_ticker.substring(0, 5);
+        let result = origin_ticker.substring(0, 4);
         return result;
     }
 
