@@ -6,6 +6,7 @@ let http = require("http");
 let request = require("request");
 //let parser = require(`./dataParser.js`);
 let crypto = require('crypto');
+let zlib = require('zlib');
 
 function ecdsa_sign(skey, msg) {
     var sig = new rsasign.Signature({ alg: "SHA256withECDSA" });
@@ -144,8 +145,11 @@ module.exports = class EnecuumNetwork extends Network {
         if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
             throw new Error(`Invalid 'parameters' object`);
 
+        let compressed_data = zlib.brotliCompressSync(JSON.stringify(parameters)).toString("base64");
+
         let parser = new ContractParser(config);
-        let data = parser.dataFromObject({type, parameters});
+        let data = parser.dataFromObject({type, parameters:{compressed_data}});
+        //let data = parser.dataFromObject({type, parameters});
 
         let tx = {
             amount : 1e8,
@@ -199,6 +203,72 @@ module.exports = class EnecuumNetwork extends Network {
             return null;
         }
     }
+
+    encode_init_data(params){
+        const model = [
+            "dst_address",
+            "dst_network",
+            "amount",
+            "src_hash",
+            "src_address",
+            "src_network",
+            "origin_hash",
+            "origin_network",
+            "nonce",
+            "transfer_id",
+            "ticker",
+        ];
+
+        let type = "claim_init";
+
+        let args = {};
+
+        args = Object.assign(args, params.ticket);
+
+        args.amount = args.amount.toString();
+        args.transfer_id = params.transfer_id;
+        args.dst_network = Number(args.dst_network);
+
+        let parameters = args;
+
+        if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
+            throw new Error(`Invalid 'parameters' object`);
+
+        let compressed_data = zlib.brotliCompressSync(JSON.stringify(parameters)).toString("base64");
+        let parser = new ContractParser(config);
+        let data = parser.dataFromObject({type, parameters:{compressed_data}});
+        //let data = parser.dataFromObject({type, parameters});
+
+        return data;
+    }
+
+    encode_confirm_data(params){
+        const model = [
+            "validator_id",
+            "validator_sign",
+            "transfer_id",
+        ];
+
+        let type = "claim_confirm";
+
+        let args = {};
+
+        args.validator_id = params.validator_id;
+        args.validator_sign = params.validator_sign;
+        args.transfer_id = params.transfer_id;
+
+        let parameters = args;
+
+        if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
+            throw new Error(`Invalid 'parameters' object`);
+
+        let compressed_data = zlib.brotliCompressSync(JSON.stringify(parameters)).toString("base64");
+        let parser = new ContractParser(config);
+        let data = parser.dataFromObject({type, parameters:{compressed_data}});
+        //let data = parser.dataFromObject({type, parameters});
+
+        return data;
+    }
     
     async send_claim_init(params) {
         console.trace(`Sending claim with params ${JSON.stringify(params/*, null, "\t"*/)} at ${this.caption}`);
@@ -221,14 +291,14 @@ module.exports = class EnecuumNetwork extends Network {
         args = Object.assign(args, params.ticket);
 
         args.amount = args.amount.toString();
-        //args.amount = BigInt(args.amount);
         args.transfer_id = params.transfer_id;
         args.dst_network = Number(args.dst_network);
-        //args.dst_address = '02375a89c4cd7a7410fcf90c6b144d82ea48c03e96d9c335b63627300771e672';
 
         console.trace(`args = ${JSON.stringify(args)}`);
 
         try {
+            let compressed_data = this.encode_init_data(params);
+            //return await this.send_tx("claim_init", {compressed_data}, ["compressed_data"]);
             return await this.send_tx("claim_init", args, model);
         } catch(e){
             console.error(e);
@@ -331,11 +401,16 @@ module.exports = class EnecuumNetwork extends Network {
 
             console.trace(JSON.stringify(params));
 
+            let decompressed = zlib.brotliDecompressSync(Buffer.from(params.parameters.compressed_data, 'base64'));
+            console.trace(`decompressed = ${decompressed}`);
+            decompressed = JSON.parse(decompressed);
+
+
             if (params.type === 'lock'){
-                let dst_address = params.parameters.dst_address;
-                let dst_network = params.parameters.dst_network;
-                let amount = params.parameters.amount;
-                let src_hash = params.parameters.hash;
+                let dst_address = decompressed.dst_address;
+                let dst_network = decompressed.dst_network;
+                let amount = decompressed.amount;
+                let src_hash = decompressed.hash;
                 let src_address = tx_info.from;
 
                 let result = { dst_address, dst_network, amount, src_hash, src_address };

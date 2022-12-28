@@ -139,6 +139,14 @@ module.exports = class Node {
 
 			confirmation.validator_sign = dst_network.provider.sign(confirmation.transfer_id);
 
+			// encoded data
+			if (dst_network.provider.type === "enecuum"){
+				confirmation.encoded_data = {};
+				confirmation.encoded_data.enq = {};
+				confirmation.encoded_data.enq.init = dst_network.provider.encode_init_data(confirmation);
+				confirmation.encoded_data.enq.confirm = dst_network.provider.encode_confirm_data(confirmation);
+			}
+
 			res.send(confirmation);
 		});
 	}
