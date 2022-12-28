@@ -1,0 +1,29 @@
+{
+	"england": {
+		"url": "http://95.216.207.173",
+		"type": "enecuum",
+		"caption": "bitdev",
+		"pubkey": "02b227742759f854f012077216e205dc49b046ba65f5f4722d6a5d782ce5746d9c",
+		"prvkey": "8931682138f06e91c49b835acb199f177f7f902f0f5b8b034579f61653cbf441",
+		"ticker": "0000000000000000000000000000000000000000000000000000000000000000",
+		"genesis_pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
+	},
+	"pound": "1b5f5dc5662fabda34be7a24c0f74094a68a057b3427db21eb5f5823962cf9d2",
+	"alice_pubkey": "02b227742759f854f012077216e205dc49b046ba65f5f4722d6a5d782ce5746d9c",
+
+	"mexico": {
+		"url": "http://localhost:8023",
+		"type": "test",
+		"caption": "test_2"
+	},
+	"peso": "230001",
+	"jose_pubkey": "2301",
+
+	"germany": {
+		"url": "http://localhost:8029",
+		"type": "test",
+		"caption": "test_3"
+	},
+	"mark": "290001",
+	"hans_pubkey": "2901"
+}
