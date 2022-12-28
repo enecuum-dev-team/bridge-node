@@ -167,12 +167,12 @@ app.post('/api/v1/claim', async (req, res) => {
 			if (inner_nonce + 1 !== nonce){
 				console.warn(`Nonces do not match - ${JSON.stringify(transfers[transfer_i])} and ${nonce}!`);				
 			} else {
-				if (origin_network === config.network_id){
+				if (Number(origin_network) === config.network_id){
 					console.debug(`Unlocking old token`);
 					add_amount(SMART_ADDRESS, origin_hash, -1 * amount);
 					add_amount(dst_address, origin_hash, amount);
 					transactions[tx_hash] = {dst_hash:origin_hash};
-				} else {
+				} else {	
 					let minted_i = minted.findIndex((m) => {return (m.origin_hash === origin_hash) && (m.origin_network === origin_network)});
 
 					if (minted_i > -1){
