@@ -24,6 +24,26 @@ module.exports = class Node {
 
 		this.app.use(express.json());
 
+		this.app.post('/api/v1/encode_lock', async (req, res) => {
+			console.trace('on encode_lock', req.body);
+			let {dst_address, dst_network, amount, src_hash, src_network} = req.body;
+
+			try {
+				let src_network_obj = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(src_network)})[0];
+
+				if (src_network_obj){	
+					let encoded_data = src_network_obj.provider.encode_lock_data({dst_address, dst_network, amount, src_hash});
+					let result = {encoded_data};
+					res.send(result);
+				} else {
+					res.send({err:1});
+				}
+			} catch(e){
+				console.error(e);
+				res.send({err:1});
+			}
+		});
+
 		this.app.post('/api/v1/notify', async (req, res) => {
 			console.trace('on notify', req.body);
 

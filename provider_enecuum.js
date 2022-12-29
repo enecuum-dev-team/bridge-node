@@ -269,6 +269,37 @@ module.exports = class EnecuumNetwork extends Network {
 
         return data;
     }
+
+    encode_lock_data(params){
+        const model = [
+            "dst_address",
+            "dst_network",
+            "amount",
+            "hash"
+        ];
+
+        let type = "lock";
+
+        let args = {};
+
+        args.dst_address = params.dst_address;
+        args.dst_network = Number(params.dst_network);
+        args.amount = params.amount.toString();
+        args.hash = params.src_hash;
+
+        let parameters = args;
+
+        if (!Object.keys(parameters).every((param) => model.indexOf(param) !== -1))
+            throw new Error(`Invalid 'parameters' object`);
+
+        let compressed_data = zlib.brotliCompressSync(JSON.stringify(parameters)).toString("base64");
+        console.silly(`compressed_data = ${compressed_data}`);
+        let parser = new ContractParser(config);
+        let data = parser.dataFromObject({type, parameters:{compressed_data}});
+        //let data = parser.dataFromObject({type, parameters});
+
+        return data;
+    }
     
     async send_claim_init(params) {
         console.trace(`Sending claim with params ${JSON.stringify(params/*, null, "\t"*/)} at ${this.caption}`);
