@@ -20,7 +20,7 @@ module.exports = class Node {
 	constructor(config) {
 		this.config = config;
 		this.app = express();
-		this.app.use(cors());
+		this.app.use(cors({origin: '*'}));
 
 		this.app.use(express.json());
 
@@ -87,7 +87,7 @@ module.exports = class Node {
 			}
 
 			console.info(`Checking smart contract state at ${src_network.caption}...`);
-			let src_state = await src_network.provider.read_state();
+			let src_state = await src_network.provider.read_state(lock.src_hash);
 			if (!src_state){
 				console.error(`Failed to read smart contract state at ${src_network.caption}`);
 				res.send({err:1});
@@ -203,7 +203,12 @@ module.exports = class Node {
 			}
 			console.info(`Smart contract state = ${JSON.stringify(state)}`);
 
-			network.network_id = state.network_id;
+			if (state.network_id){
+				network.network_id = state.network_id;
+			} else {
+				console.warn(`network_id for ${network.caption} not set, setting to -1`);
+				network.network_id = -1;
+			}
 		});
 	}
 }

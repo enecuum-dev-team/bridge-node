@@ -248,10 +248,13 @@ module.exports = class EthereumNetwork extends Network{
 		 	let params = [];
 		 	params[0] = Buffer.from(src_address, 'hex');
 		 	params[1] = Buffer.from(src_hash, 'hex');
+		 	//params[0] = src_address;
+		 	//params[1] = src_hash;
 		 	params[2] = Number(src_network);
 		 	params[3] = dst_address;
 
 		 	console.debug(`get_transfer call params: ${JSON.stringify(params)}`);
+		 	//console.debug(`get_transfer call params: ${params}`);
 
 	 		let nonce = await contract.methods.get_transfer(...params).call();
 
@@ -271,12 +274,21 @@ module.exports = class EthereumNetwork extends Network{
 		}
 	}
 
-	async read_state(){
-		console.trace(`Reading state of contract ${this.contract_address} at ${this.caption}`);
+	async read_state(hash){
+		console.trace('sss');
+		console.trace(`Reading state of contract ${this.contract_address} for (${hash})at ${this.caption}`);
 	 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
  		let network_id = await contract.methods.network_id().call();
- 		//let minted = await contract.methods.minted(111).call();
+
+ 		network_id = Number(network_id);
  		let minted = [];
+
+ 		if (hash){
+			let tmp = await contract.methods.minted(hash).call();
+	 		console.trace(tmp);
+	 		//let data = {minted_hash : hash, origin_hash : tmp.origin_hash, origin_network : tmp.origin_network};
+	 		minted = [{wrapped_hash : hash, origin_hash : tmp.origin_hash, origin_network : tmp.origin_network}];
+ 		}
 
  		return {network_id, minted};
 	}
