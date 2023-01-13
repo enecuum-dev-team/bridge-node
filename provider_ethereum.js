@@ -286,8 +286,9 @@ module.exports = class EthereumNetwork extends Network{
  		if (hash){
 			let tmp = await contract.methods.minted(hash).call();
 	 		console.trace(tmp);
-	 		//let data = {minted_hash : hash, origin_hash : tmp.origin_hash, origin_network : tmp.origin_network};
-	 		minted = [{wrapped_hash : hash, origin_hash : tmp.origin_hash, origin_network : tmp.origin_network}];
+	 		if (tmp.origin_network != 0){
+	 			minted.push({wrapped_hash : hash, origin_hash : tmp.origin_hash, origin_network : tmp.origin_network});
+	 		}
  		}
 
  		return {network_id, minted};
