@@ -147,12 +147,14 @@ module.exports = class EnecuumNetwork extends Network {
 
         let compressed_data = zlib.brotliCompressSync(JSON.stringify(parameters)).toString("base64");
 
+        console.trace(`compressed_data = ${compressed_data}`);
+
         let parser = new ContractParser(config);
         let data = parser.dataFromObject({type, parameters:{compressed_data}});
         //let data = parser.dataFromObject({type, parameters});
 
         let tx = {
-            amount : 1e8,
+            amount : 1e9,
             from : this.pubkey,
             to : this.genesis_pubkey,
             data : data,
@@ -422,7 +424,9 @@ module.exports = class EnecuumNetwork extends Network {
 
         try{
             let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
+            console.trace(`url = ${url}`);
             let tx_info = await http_get(url);
+            console.trace(`tx_info = ${tx_info}`);
             tx_info = JSON.parse(tx_info);
             console.trace(tx_info);
 
@@ -458,19 +462,19 @@ module.exports = class EnecuumNetwork extends Network {
         }
     }
 
-    async read_state(url) {
+    async read_state() {
         console.trace(`Reading state of contract ${this.contract_address} at ${this.caption}`);
 
         let network_id, minted;
 
         try {
-            network_id = await this.get_network_id(url);
+            network_id = await this.get_network_id();
         } catch(e){
             console.error(e);
         }
 
         try {
-            minted = await this.get_minted_tokens(url);
+            minted = await this.get_minted_tokens();
         } catch(e){
             minted = [];
             console.error(e);
