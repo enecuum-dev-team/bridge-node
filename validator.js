@@ -45,6 +45,13 @@ module.exports = class Node {
 		});
 
 		this.app.post('/api/v1/notify', async (req, res) => {
+			let decimals = [];
+			decimals[1] = 10;
+			decimals[5] = 18;
+			decimals[17] = 2;
+			decimals[23] = 3;
+			decimals[29] = 4;
+
 			console.trace('on notify', req.body);
 
 			let {networkId, txHash} = req.body;
@@ -111,7 +118,24 @@ module.exports = class Node {
 
 			//  calculating amount
 			//ticket.amount = lock.amount * 10n ** BigInt(token_info.decimals);
-			ticket.amount = lock.amount;
+			//ticket.amount = lock.amount;
+			let src_decimals = decimals[src_network.network_id];
+			let dst_decimals = decimals[dst_network.network_id];
+
+			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
+			if (src_decimals && dst_decimals){
+				if (dst_decimals < src_decimals){
+					ticket.amount = Number(BigInt(lock.amount) / (BigInt(10) ** BigInt(src_decimals - dst_decimals)));
+				} else if (src_decimals < dst_decimals){
+					ticket.amount = Number(BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals)));
+				} else {
+					ticket.amount = lock.amount;
+				}
+			} else {
+				console.error(`Failed to obtain decimals data`);
+				res.send({err:1});
+				return;
+			}
 
 			//	from lock
 			ticket.dst_address = lock.dst_address;
