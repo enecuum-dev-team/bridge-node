@@ -2,7 +2,7 @@
 	"tokens": [{
 		"hash": "230001",
 		"ticker": "PSO",
-		"decimals": 2
+		"decimals": 3
 	}],
 	"ledger": {
 		"2301":{

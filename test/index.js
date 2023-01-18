@@ -21,7 +21,7 @@ require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss
 
 const CONFIG_FILENAME = `config.json`;
 let config = {
-  tx_confirmation_delay_ms: 30000,
+  tx_confirmation_delay_ms: 60000,
   validators : [{url:"http://localhost:8080/api/v1/notify"}],
 
   england: {"url" : "http://localhost:8017", "type" : "test", "caption" : "test_1"},
@@ -245,10 +245,20 @@ describe('happy_case_1', function () {
     console.log('Update complete');
   });
 
+  it(`debug`, async function(){
+    let src_address = '0x03c91e88967465c44aa2afeab3b87dbeede9bd63dbe4a0121ea02fa3f0f4a4e2a8';
+    let src_hash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    let src_network = 11;
+    let dst_address = '0x1E4d77e8cCd3964ad9b10Bdba00aE593DF1112A1';
+    let tr = await ENGLAND.provider.read_transfers(src_address, src_hash, src_network, dst_address);
+
+    console.log(tr);
+  });
+
   it.only('forward test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
-    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 304, MEXICO, JOSE_PUBKEY);
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 3000000000000000, MEXICO, JOSE_PUBKEY);
   });
 
   it('backward test', async function() {
