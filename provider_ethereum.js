@@ -275,7 +275,6 @@ module.exports = class EthereumNetwork extends Network{
 	}
 
 	async read_state(hash){
-		console.trace('sss');
 		console.trace(`Reading state of contract ${this.contract_address} for (${hash})at ${this.caption}`);
 	 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
  		let network_id = await contract.methods.network_id().call();
