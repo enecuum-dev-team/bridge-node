@@ -514,13 +514,19 @@ module.exports = class EnecuumNetwork extends Network {
 
     async get_network_id (url=this.url) {
         console.trace(`Reading enecuum network id at ${url}`);
-        let net_id = await http_get(`${url}/api/v1/network_id`);
-        return Number(net_id);
+        let network_info = await http_get(`${url}/api/v1/network_info`);        
+        try {
+            network_info = JSON.parse(network_info);
+            return Number(network_info.bridge.BRIDGE_NETWORK_ID);
+        } catch(e) {
+            console.error(e);
+            return -1;
+        }
     }
 
     async get_minted_tokens (url=this.url) {
         console.trace(`Reading minted tokens at ${url}`)
-        let minted_tokens = await http_get(`${url}/api/v1/minted_token`);
+        let minted_tokens = await http_get(`${url}/api/v1/bridge_minted_tokens`);
         return JSON.parse(minted_tokens);
     }
 
