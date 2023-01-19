@@ -16,6 +16,14 @@ let calculate_transfer_id = function(ticket){
 	return transfer_id;
 }
 
+
+let decimals = [];
+decimals[1] = 10;
+decimals[5] = 18;
+decimals[17] = 2;
+decimals[23] = 3;
+decimals[29] = 4;
+
 module.exports = class Node {
 	constructor(config) {
 		this.config = config;
@@ -43,14 +51,75 @@ module.exports = class Node {
 				res.send({err:1});
 			}
 		});
+		this.app.get('/api/v1/get_dst_decimals', async (req, res) => {
+			console.trace(`on get_dst_decimals ${JSON.stringify(req.query)}`);
+
+			let response;
+			try {
+				let {hash, src_network_id, dst_network_id} = req.query;
+	
+				// choose source network
+				let src_network = config.networks.filter((network) => {return network.network_id === Number(src_network_id)})[0];
+				if (src_network === undefined){
+					console.error(`Failed to select source network - wrong src_network_id ${src_network_id}`);
+					throw(`failed to select network`);
+				}
+
+				console.info(`Checking smart contract state at ${src_network.caption}...`);
+				let src_state = await src_network.provider.read_state(hash);
+				if (!src_state){
+					console.error(`Failed to read smart contract state at ${src_network.caption}`);
+					throw(`failed to read state`);
+				}
+				console.info(`src_state = ${JSON.stringify(src_state)}`);
+
+				let minted_data = src_state.minted.find((minted)=>{return minted.wrapped_hash === hash});
+				console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
+
+				if (minted_data){
+					// choose origin network
+					let origin_network_id = Number(minted_data.origin_network);
+					let org_network = config.networks.filter((network) => {return network.network_id === origin_network_id})[0];
+					if (org_network === undefined){
+						console.error(`Failed to select source network - wrong origin_network_id ${origin_network_id}`);
+						throw(`failed to select network`);
+					}
+
+					// reading origin token info
+					console.info(`Checking token info for ${minted_data.origin_hash} at ${org_network.caption}...`);
+					let token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
+					if (!token_info){
+						console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
+						throw(`failed to read token info from selected network`);
+					}
+					console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(token_info)}`);
+
+					let dst_decimals = token_info.decimals;
+					console.trace(`dst_decimals = ${dst_decimals}`);
+					if (dst_decimals){
+						response = {result: {dst_decimals}, err:0};
+					} else {
+						throw "Cannot read decimals from token_info";
+					}
+
+				} else {
+					let dst_decimals = decimals[dst_network_id];
+					console.trace(`dst_decimals = ${dst_decimals}`);
+					if (dst_decimals){
+						response = {result: {dst_decimals}, err:0};
+					} else {
+						throw "Cannot read decimals from dst_network";
+					}
+				}
+			} catch(e){
+				console.error(e);
+				response = {err:1};
+			}
+			console.trace(`response = ${JSON.stringify(response)}`);
+			res.send(response);
+		});
 
 		this.app.post('/api/v1/notify', async (req, res) => {
-			let decimals = [];
-			decimals[1] = 10;
-			decimals[5] = 18;
-			decimals[17] = 2;
-			decimals[23] = 3;
-			decimals[29] = 4;
 
 			console.trace('on notify', req.body);
 

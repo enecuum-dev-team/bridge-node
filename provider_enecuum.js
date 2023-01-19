@@ -555,6 +555,11 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Reading token_info for ${hash} at ${this.caption}`);
 
         try {
+            if (hash.startsWith("0x")){
+                hash = hash.substring(2);
+                console.trace(`trim hash, trimmed = ${hash}`);
+            }
+
             let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
             console.trace(`response = ${response}`);
             response = JSON.parse(response);
