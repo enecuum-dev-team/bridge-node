@@ -487,7 +487,7 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
 
         try {
-            let url = `${this.url}/api/v1/transfers?dst_address=${dst_address}&src_address=${src_address}&src_network=${src_network}&src_hash=${src_hash}`;
+            let url = `${this.url}/api/v1/bridge_last_transfer?dst_address=${dst_address}&src_address=${src_address}&src_network=${src_network}&src_hash=${src_hash}`;
             console.trace(`url = ${url}`);
             let response = await http_get(url);
 
