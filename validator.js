@@ -51,8 +51,32 @@ module.exports = class Node {
 				res.send({err:1});
 			}
 		});
+
 		this.app.get('/api/v1/get_dst_decimals', async (req, res) => {
 			console.trace(`on get_dst_decimals ${JSON.stringify(req.query)}`);
+
+			let response;
+			try {
+				let {hash, src_network_id, dst_network_id} = req.query;
+	
+				let dst_decimals = decimals[dst_network_id];
+
+				if (dst_decimals){
+					response = {result:{dst_decimals}, err : 0};
+				} else {
+					throw "failed to retrieve decimals";
+				}
+
+			} catch(e){
+				console.error(e);
+				response = {err:1};
+			}
+			console.trace(`response = ${JSON.stringify(response)}`);
+			res.send(response);
+		});
+
+		this.app.get('/api/v1/get_dst_decimals1', async (req, res) => {
+			console.trace(`on get_dst_decimals1 ${JSON.stringify(req.query)}`);
 
 			let response;
 			try {
@@ -188,7 +212,7 @@ module.exports = class Node {
 			//  calculating amount
 			//ticket.amount = lock.amount * 10n ** BigInt(token_info.decimals);
 			//ticket.amount = lock.amount;
-			let src_decimals = decimals[src_network.network_id];
+			let src_decimals = token_info.decimals;
 			let dst_decimals = decimals[dst_network.network_id];
 
 			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);

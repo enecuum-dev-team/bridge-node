@@ -78,14 +78,14 @@ module.exports = class EthereumNetwork extends Network{
 
 			let claim_params = [params.ticket.dst_address,
 				params.ticket.dst_network,
-				params.ticket.amount,
+				BigInt(params.ticket.amount),
 				Buffer.from(params.ticket.src_hash, 'hex'),
 				Buffer.from(params.ticket.src_address, 'hex'),
 				params.ticket.src_network,
 				Buffer.from(params.ticket.origin_hash, 'hex'),
 				params.ticket.origin_network,
 				params.ticket.nonce,
-				"wrapped",
+				"SB_token",
 				params.ticket.ticker
 				];
 
