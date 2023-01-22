@@ -80,7 +80,8 @@ let random_hash = function(){
 
 let create_token = function(ticker){
 	let hash = random_hash();
-	state.tokens.push({hash, ticker});
+	let decimals = state.decimals;
+	state.tokens.push({hash, ticker, decimals});
 	return hash;
 }
 
@@ -95,14 +96,19 @@ let get_amount = function(address, hash){
 let add_amount = function(address, hash, amount){
 	if (state.ledger[address]){
 		if (state.ledger[address][hash]){
-			state.ledger[address][hash] += Number(amount);
+			let upd = state.ledger[address][hash] += Number(amount);
+			if (upd < 0){
+				console.fatal(`Negative ledger[${address}][${hash}] = ${upd}`);
+			} else {
+				state.ledger[address][hash] = upd;
+			}
 		} else {
 			state.ledger[address][hash] = Number(amount);
 		}
 	} else {
 		state.ledger[address] = {};
 		state.ledger[address][hash] = Number(amount);
-	}
+	}	
 }
 
 app.post('/api/v1/lock', async (req, res) => {

@@ -1,32 +1,7 @@
 let Network = require('./provider_abstract.js');
 let Web3 = require('web3');
 
-let erc20_abi = [
-  // balanceOf
-  {
-    constant:true,
-    inputs:[{"name":"_owner","type":"address"}],
-    name:"balanceOf",
-    outputs:[{"name":"balance","type":"uint256"}],
-    type:"function"
-  },
-  // decimals
-  {
-    constant:true,
-    inputs:[],
-    name:"decimals",
-    outputs:[{"name":"","type":"uint8"}],
-    type:"function"
-  },
-  // symbol
-  {
-    constant: true,
-    inputs: [],
-    name: "symbol",
-    outputs: [{"name": "","type": "string"}],
-    type: "function"
-    }
-];
+let erc20_abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
 module.exports = class EthereumNetwork extends Network{
 	constructor(network_config){
@@ -36,6 +11,7 @@ module.exports = class EthereumNetwork extends Network{
 		this.abi = network_config.abi;
 		this.contract_address = network_config.contract_address;
 		this.prvkey = network_config.prvkey;
+		this.known_tokens = network_config.known_tokens;
 
 		if (network_config.type !== this.type){
 			console.fatal(`Network config initialization failed due type mismatch: ${this.type} required instead ${network_config.type}`);
@@ -47,15 +23,29 @@ module.exports = class EthereumNetwork extends Network{
 	async send_lock(params){
 		console.trace(`Sending lock with params ${JSON.stringify(params)} at ${this.caption}`);
 
+		let est_gas = 300000;
+
 		try {
 			let {dst_address, dst_network, amount, src_hash, src_address} = params;
 
-			//let eth_balance = await web3.eth.getBalance(`this.pubkey`);
+			let erc20_contract = new this.web3.eth.Contract(erc20_abi, src_hash);
+			let allowance = await erc20_contract.methods.allowance(src_address, this.contract_address).call();
+
+			console.trace(`${src_hash} allowance = ${allowance}`);
+
+			if (allowance < amount){
+				console.trace(`allowance too low, increasing...`);
+				let allowance_tx = erc20_contract.methods.approve(this.contract_address, amount);
+
+				let tx = await this.web3.eth.accounts.signTransaction({to:src_hash, data:allowance_tx.encodeABI(), gas:est_gas}, this.prvkey);
+				console.trace(`tx = ${JSON.stringify(tx)}`);
+
+				let receipt = await this.web3.eth.sendSignedTransaction(tx.rawTransaction);
+				console.trace(`allowance_hash = ${receipt.transactionHash}`);			
+			}
 
 			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
 			let lock_tx = bridge_contract.methods.lock(Buffer.from(dst_address), dst_network, amount, src_hash);
-
-			let est_gas = 300000;
 
 			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address, data:lock_tx.encodeABI(), gas:est_gas}, this.prvkey);
 			console.trace(`tx = ${JSON.stringify(tx)}`);
@@ -118,7 +108,19 @@ module.exports = class EthereumNetwork extends Network{
 
 		try {
 			if (hash === undefined){
-				return {}
+				let result = {};
+
+				for (let token of this.known_tokens){
+					try {
+						let erc20_contract = new this.web3.eth.Contract(erc20_abi, token);
+						let erc20_balance = await erc20_contract.methods.balanceOf(address).call();
+						result[token] = BigInt(erc20_balance);
+					} catch(e){
+						console.warn(e);
+					}
+				}
+
+				return result;
 			} else {
 				let erc20_contract = new this.web3.eth.Contract(erc20_abi, hash);
 				let erc20_balance = await erc20_contract.methods.balanceOf(address).call();
@@ -231,7 +233,37 @@ module.exports = class EthereumNetwork extends Network{
 				return;
 			}
 
-			return {dst_address, dst_network, amount, src_hash, src_address, ticker};
+			let topic, params;
+
+			let dst_hash, dst_address, amount;
+
+			if (log_entry.topics.includes('0xab8530f87dc9b59234c4623bf917212bb2536d647574c8e7e5da92c2ede0c9f8')){
+				//mint
+				topic = this.web3.utils.sha3("Claim(address,address,uint256)");
+				params = this.web3.eth.abi.decodeParameters(['address ', 'address', 'uint256'], log_entry.data);
+				
+				console.trace(`Extracted params MINT ${JSON.stringify(params)}`);
+
+				dst_hash = params["0"];
+				dst_address = params["1"];
+				amount = params["2"];
+
+			} else if (log_entry.topics.includes('0x6381d9813cabeb57471b5a7e05078e64845ccdb563146a6911d536f24ce960f1')){
+				//unlock
+				topic = this.web3.utils.sha3("Unlock(address,uint256)");
+				params = this.web3.eth.abi.decodeParameters(['address ', 'uint256'], log_entry.data);
+
+				console.trace(`Extracted params UNLOCK ${JSON.stringify(params)}`);
+
+				//dst_hash = params["0"];
+				dst_address = params["0"];
+				amount = params["1"];
+
+			} else {
+				throw "cannot read Mint or Unlock event by id (maybe topic id is wrong)";				
+			}
+
+			return {dst_hash, dst_address, amount};
 		} catch(e){
 			console.error(e);
 			return null;
@@ -286,7 +318,7 @@ module.exports = class EthereumNetwork extends Network{
 			let tmp = await contract.methods.minted(hash).call();
 	 		console.trace(tmp);
 	 		if (tmp.origin_network != 0){
-	 			minted.push({wrapped_hash : hash, origin_hash : tmp.origin_hash, origin_network : tmp.origin_network});
+	 			minted.push({wrapped_hash : hash, origin_hash : tmp.origin_hash.substring(2), origin_network : tmp.origin_network});
 	 		}
  		}
 

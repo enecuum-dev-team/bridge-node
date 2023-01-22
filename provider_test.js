@@ -113,6 +113,10 @@ module.exports = class TestNetwork extends Network{
 		console.trace(`Reading token_info for ${hash} at ${this.caption}`);
 
 		try {
+			if (hash.startsWith('0x')){
+				hash = hash.substring(2);
+				console.trace(`hash trimmed to ${hash}`);
+			}
 			let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
 			if (response.err === 0){
 				let result = {};
