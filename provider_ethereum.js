@@ -66,7 +66,13 @@ module.exports = class EthereumNetwork extends Network{
 		try {
 			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
 
-			let claim_params = [params.ticket.dst_address,
+			if (params.ticket.origin_hash.startsWith('0x')){
+				params.ticket.origin_hash = params.ticket.origin_hash.slice(2);
+				console.debug(`origin_hash trimmed to ${params.ticket.origin_hash}`);
+			}
+
+			let claim_params = [
+				params.ticket.dst_address,
 				params.ticket.dst_network,
 				BigInt(params.ticket.amount),
 				Buffer.from(params.ticket.src_hash, 'hex'),
@@ -79,11 +85,11 @@ module.exports = class EthereumNetwork extends Network{
 				params.ticket.ticker
 				];
 
-			//console.silly(claim_params);
+			console.silly(claim_params);
 			
 			let claim_tx = bridge_contract.methods.claim(claim_params, []);
 
-			let est_gas = 1000000;
+			let est_gas = 3000000;
 
 			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address,data:claim_tx.encodeABI(),gas:est_gas}, this.prvkey);
 			console.trace(`tx = ${JSON.stringify(tx)}`);
@@ -192,6 +198,8 @@ module.exports = class EthereumNetwork extends Network{
 		try {
 			let receipt = await this.web3.eth.getTransactionReceipt(tx_hash);
 
+			console.trace(`receipt = ${JSON.stringify(receipt)}`);
+
 			let log_entry = receipt.logs.filter((entry) => {return entry.address === this.contract_address})[0];
 			if (!log_entry){
 				console.error(`Failed to retrive log entry for ${this.contract_address}`);
@@ -203,17 +211,20 @@ module.exports = class EthereumNetwork extends Network{
 
 			let params = this.web3.eth.abi.decodeParameters(['bytes', 'uint24', 'uint256', 'address', 'address'], log_entry.data);
 
-			console.trace(`Extracted params ${JSON.stringify(params)}`);
+			console.trace(`Extracted raw params ${JSON.stringify(params)}`);
 
 			//let dst_address = this.web3.utils.hexToAscii(params["0"]);
-			let dst_address = new TextDecoder().decode(Buffer.from(params["0"].slice(2), 'hex'))
+			let dst_address = new TextDecoder().decode(Buffer.from(params["0"].slice(2), 'hex'));
 			let dst_network = params["1"];
 			let amount = params["2"];
-			let src_hash = params["3"].slice(2);
-			let src_address = params["4"].slice(2);
+			let src_hash = params["3"]/*.slice(2)*/;
+			let src_address = params["4"]/*.slice(2)*/;
 			let ticker = 'wra';
 
-			return {dst_address, dst_network, amount, src_hash, src_address, ticker};
+			let lock_data = {dst_address, dst_network, amount, src_hash, src_address, ticker};
+			console.trace(`lock_data = ${JSON.stringify(lock_data)}`);
+
+			return lock_data;
 		} catch(e){
 			console.error(e);
 			return null;
