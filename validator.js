@@ -23,6 +23,9 @@ decimals[5] = 18;
 decimals[17] = 2;
 decimals[23] = 3;
 decimals[29] = 4;
+decimals[97] = 18;
+decimals[66] = 10;
+decimals[80001] = 18;
 
 module.exports = class Node {
 	constructor(config) {
@@ -245,10 +248,10 @@ module.exports = class Node {
 			ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;
-				ticket.origin_network = minted_data.origin_network;
+				ticket.origin_network = Number(minted_data.origin_network);
 			} else {
 				ticket.origin_hash = ticket.src_hash;
-				ticket.origin_network = ticket.src_network;
+				ticket.origin_network = Number(ticket.src_network);
 			}
 
 			//  from destination
