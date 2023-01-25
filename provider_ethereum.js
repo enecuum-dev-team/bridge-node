@@ -45,9 +45,21 @@ module.exports = class EthereumNetwork extends Network{
 			}
 
 			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
-			let lock_tx = bridge_contract.methods.lock(Buffer.from(dst_address), dst_network, amount, src_hash);
+			let lock_params = [
+					this.web3.utils.asciiToHex(dst_address),
+					//Buffer.from(dst_address),
+					dst_network,
+					amount,
+					src_hash
+				];
+			
+			console.trace(`lock_params = ${JSON.stringify(lock_params)}`);
 
-			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address, data:lock_tx.encodeABI(), gas:est_gas}, this.prvkey);
+			let lock_tx = bridge_contract.methods.lock(...lock_params);
+
+			let tx_data = lock_tx.encodeABI();
+
+			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address, data:tx_data, gas:est_gas}, this.prvkey);
 			console.trace(`tx = ${JSON.stringify(tx)}`);
 
 			let receipt = await this.web3.eth.sendSignedTransaction(tx.rawTransaction);
