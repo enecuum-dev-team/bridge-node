@@ -113,7 +113,8 @@ module.exports = class EnecuumNetwork extends Network {
         this.ticker = network_config.ticker;
         this.genesis_pubkey = network_config.genesis_pubkey;
         this.prvkey = network_config.prvkey;
-        this.pubkey = network_config.pubkey;        
+        this.pubkey = network_config.pubkey;      
+        this.tx_fee = network_config.tx_fee;  
 
         if (network_config.type !== this.type) {
             console.fatal(
@@ -154,7 +155,7 @@ module.exports = class EnecuumNetwork extends Network {
         //let data = parser.dataFromObject({type, parameters});
 
         let tx = {
-            amount : 1e9,
+            amount : this.tx_fee,
             from : this.pubkey,
             to : this.genesis_pubkey,
             data : data,
@@ -364,18 +365,20 @@ module.exports = class EnecuumNetwork extends Network {
     async wait_lock(tx_hash) {
         console.trace(`Waiting for lock transaction ${tx_hash} at ${this.caption}`);
         
+        let response;
         try {
             let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;            
-            let response = await http_get(url);
+            response = await http_get(url);
 
             response = JSON.parse(response);
-            if (response.status === 3){
-                return true;
-            } else {
-                return false;
-            }
         } catch(e){
             return false;
+        }
+
+        if (response.status === 3){
+            return true;
+        } else {
+            throw `TX ${tx_hash} rejected with status ${response.status}`;
         }
     }
     
@@ -426,9 +429,7 @@ module.exports = class EnecuumNetwork extends Network {
             let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
             console.trace(`url = ${url}`);
             let tx_info = await http_get(url);
-            console.trace(`tx_info = ${tx_info}`);
             tx_info = JSON.parse(tx_info);
-            console.trace(tx_info);
 
             let parser = new ContractParser(config);
 
@@ -514,27 +515,43 @@ module.exports = class EnecuumNetwork extends Network {
 
     async get_network_id (url=this.url) {
         console.trace(`Reading enecuum network id at ${url}`);
-        let network_info = await http_get(`${url}/api/v1/network_info`);        
+        let request_url = `${url}/api/v1/network_info`;
+        let network_info = await http_get(request_url);        
         try {
             network_info = JSON.parse(network_info);
             return Number(network_info.bridge.BRIDGE_NETWORK_ID);
         } catch(e) {
             console.error(e);
+            console.error(`get_network_id - failed to parse response from ${request_url}`);
+            console.error(network_info);
             return -1;
         }
     }
 
     async get_minted_tokens (url=this.url) {
         console.trace(`Reading minted tokens at ${url}`)
-        let minted_tokens = await http_get(`${url}/api/v1/bridge_minted_tokens`);
-        return JSON.parse(minted_tokens);
+        let minted_tokens = [];
+        let request_url = `${url}/api/v1/bridge_minted_token`;
+        try {
+            minted_tokens = await http_get(request_url);
+        } catch(e){
+            console.fatal(`failed to fetch minted_tokens from ${request_url}`, e);
+        }
+
+        try {
+            return JSON.parse(minted_tokens);
+        } catch(e){
+            console.warn(`minted tokens - failed to parse response from ${request_url}`);
+            return [];
+        }
     }
 
     async get_balance (address, token){
         console.trace(`Reading account ${address} at ${this.caption}`);
 		try {
             //let url = `${this.url}/api/v1/balance?id=${address}&token=${token}`;
-            let url = `${this.url}/api/v1/balance_all?id=${address}`;
+            //let url = `${this.url}/api/v1/balance_all?id=${address}`;
+            let url = `${this.url}/api/v1/balance_all_unfiltered?id=${address}`;
             console.trace(`url = ${url}`);
             let response = await http_get(url);
             response = JSON.parse(response);
