@@ -231,16 +231,12 @@ module.exports = class Node {
 			//creating confirmation
 			let ticket = {};
 
-			//  calculating amount
-			//ticket.amount = lock.amount * 10n ** BigInt(token_info.decimals);
-			//ticket.amount = lock.amount;
 			let src_decimals = token_info.decimals;
 			let dst_decimals = decimals[dst_network.network_id];
 
 			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
 			if (src_decimals && dst_decimals){
 				if (dst_decimals < src_decimals){
-					//ticket.amount = BigInt(lock.amount) / (BigInt(10) ** BigInt(src_decimals - dst_decimals));
 					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
 				} else if (src_decimals < dst_decimals){
 					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
@@ -267,11 +263,6 @@ module.exports = class Node {
 			console.info(`Retrieving minted data from ${src_network.caption}...`);
 			let minted_data = src_state.minted.find((minted)=>{console.silly(`${JSON.stringify(minted)}, ${lock.src_hash}`); return minted.wrapped_hash === lock.src_hash});
 			console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
-
-/*
-			ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
-			ticket.name = 'SB_token';
-*/
 
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;

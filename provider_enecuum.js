@@ -549,8 +549,6 @@ module.exports = class EnecuumNetwork extends Network {
     async get_balance (address, token){
         console.trace(`Reading account ${address} at ${this.caption}`);
 		try {
-            //let url = `${this.url}/api/v1/balance?id=${address}&token=${token}`;
-            //let url = `${this.url}/api/v1/balance_all?id=${address}`;
             let url = `${this.url}/api/v1/balance_all_unfiltered?id=${address}`;
             console.trace(`url = ${url}`);
             let response = await http_get(url);

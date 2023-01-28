@@ -84,21 +84,6 @@ module.exports = class EthereumNetwork extends Network{
 				params.ticket.origin_hash = params.ticket.origin_hash.slice(2);
 				console.debug(`origin_hash trimmed to ${params.ticket.origin_hash}`);
 			}
-/*
-			let claim_params = [
-				params.ticket.dst_address,
-				params.ticket.dst_network,
-				BigInt(params.ticket.amount),
-				Buffer.from(params.ticket.src_hash, 'hex'),
-				Buffer.from(params.ticket.src_address, 'hex'),
-				params.ticket.src_network,
-				Buffer.from(params.ticket.origin_hash, 'hex'),
-				params.ticket.origin_network,
-				params.ticket.nonce,
-				params.ticket.name,
-				params.ticket.ticker
-				];
-*/
 
 			let claim_params = [
 				params.ticket.dst_address,
@@ -116,23 +101,19 @@ module.exports = class EthereumNetwork extends Network{
 
 			console.silly(`claim_params = ${JSON.stringify(claim_params)}`);
 
-			//let signature = [params.validator_sign.v, params.validator_sign.r, params.validator_sign.s];
-			let signature = [];
+			let signature = [params.validator_sign.v, params.validator_sign.r, params.validator_sign.s];
+			//let signature = [];
 
 			console.silly(`signature = ${JSON.stringify(signature)}`);
-			
-//			let claim_tx = bridge_contract.methods.claim(claim_params, [signature]);
-			let claim_tx = bridge_contract.methods.claim(claim_params, []);
+
+			let claim_tx = bridge_contract.methods.claim(claim_params, [signature]);
 
 			let est_gas = 3000000;
 
 			let nonce = await this.web3.eth.getTransactionCount(`0xf784C9bca8BbDD93A195aeCdBa23472f89B1E7d6`, 'pending');
-
 			console.trace(`nonce = ${nonce}`);
 
-
 			let gas_price = await this.web3.eth.getGasPrice();
-
 			gas_price = Math.round(gas_price * 1.5);
 
 			console.log(`gas_price = ${gas_price}`);			
@@ -345,20 +326,15 @@ module.exports = class EthereumNetwork extends Network{
 		 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
 
 		 	let params = [];
-		 	//params[0] = Buffer.from(src_address, 'hex');
-		 	//params[1] = Buffer.from(src_hash, 'hex');
 		 	params[0] = src_address;
 		 	params[1] = src_hash;
 		 	params[2] = Number(src_network);
 		 	params[3] = dst_address;
 
 		 	console.debug(`get_transfer call params: ${JSON.stringify(params)}`);
-		 	//console.debug(`get_transfer call params: ${params}`);
 
 	 		let nonce = await contract.methods.get_transfer(...params).call();
 
-	 		//console.log(nonce);
-	 		//process.exit(0);
 	 		if (nonce === 0){
 	 			return [];
 	 		} else {
@@ -410,17 +386,7 @@ module.exports = class EthereumNetwork extends Network{
 		try {
 			let {amount, dst_address, dst_network, name, nonce, origin_hash, origin_network, src_address, src_network, src_hash, ticker} = ticket;
 			let symbol = ticker;
-			//let values = [dst_address, dst_network, amount.toString(), this.web3.utils.asciiToHex(src_hash), this.web3.utils.asciiToHex(src_address), src_network, this.web3.utils.asciiToHex(origin_hash), origin_network, nonce, name, ticker];
-			//console.trace(`encoding values ${JSON.stringify(values)}`);
-			//let encoded = this.web3.eth.abi.encodeParameters(['address','uint256','uint256','bytes','bytes','uint256','bytes','uint256','uint256','string','string'], values);
 
-/*
-			let values = [dst_address, dst_network, BigInt(amount), src_hash, src_address, src_network, origin_hash, origin_network, nonce, name, ticker];
-			console.trace(`encoding values ${JSON.stringify(values)}`);
-			let encoded = this.web3.eth.abi.encodeParameters(['address','uint256','uint256','string','string','uint256','string','uint256','uint256','string','string'], values);
-*/
-
-			//let values = [dst_address, dst_network, BigInt(amount), src_hash, src_address, src_network, origin_hash, origin_network, nonce, name, ticker];
 			let values = [
 				{value: amount.toString(), type: 'uint256'},
 				{value: dst_address, type: 'address'},
@@ -435,30 +401,12 @@ module.exports = class EthereumNetwork extends Network{
 				{value: symbol, type: 'string'},
 			];
 
-			for (let i = 1; i <= 11; i ++){
-				let sub = values.slice(0, i);
-
-				console.trace(`encoding sub ${JSON.stringify(sub)}`);
-				console.trace(`hashed sub ${this.web3.utils.keccak256(this.web3.utils.encodePacked(...sub))}`);
-			}
-
-
 			console.trace(`encoding values ${JSON.stringify(values)}`);
 			let encoded = this.web3.utils.encodePacked(...values);
-
-			//encoded = encoded.slice(2);
 
 			console.trace(`encoded = ${encoded}`);
 
 			let hashed = this.web3.utils.keccak256(encoded);
-			console.trace(`hashed = ${hashed}`);
-
-			//let hashed2 = this.web3.utils.keccak256(encoded.slice(2));
-			//console.trace(`hashed2 = ${hashed2}`);
-
-			let hashed3 = this.web3.utils.keccak256('0x' + encoded.slice(2).toUpperCase());
-			console.trace(`hashed3 = ${hashed3}`);
-
 			console.trace(`hashed = ${hashed}`);
 
 			let signature = this.web3.eth.accounts.sign(
