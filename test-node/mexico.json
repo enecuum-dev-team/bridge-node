@@ -1,17 +1,23 @@
 {
+	"decimals": 3,
 	"tokens": [{
-		"hash": "230001",
+		"hash": "230002",
 		"ticker": "PSO",
+		"name": "Peso",
 		"decimals": 3
 	}],
 	"ledger": {
 		"2301":{
-			"230001":10000
+			"230002":10000
 		}
 	},
 	"known_networks":[
 		{"id":1, "decimals":10},
+		{"id":5, "decimals":18},
 		{"id":17, "decimals":2},
-		{"id":29, "decimals":4}
+		{"id":29, "decimals":4},
+		{"id":97, "decimals":18},
+		{"id":66, "decimals":10},
+		{"id":80001, "decimals":18}
 	]
 }

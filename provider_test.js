@@ -122,6 +122,7 @@ module.exports = class TestNetwork extends Network{
 				let result = {};
 				result.decimals = response.result.decimals;
 				result.ticker = response.result.ticker;
+				result.name = response.result.name;
 
 				return result;
 			} else {
@@ -272,8 +273,14 @@ module.exports = class TestNetwork extends Network{
 	}
 
 	create_ticker_from(origin_ticker){
-		console.trace(`Creating new ticker from string ${origin_ticker}`);
-		let result = origin_ticker.substring(0, 3);
+		console.trace(`Creating new test ticker from string ${origin_ticker}`);
+		let result = 'SB' + origin_ticker.substring(0, 2);
+		return result;
+	}
+
+	create_name_from(origin_name){
+		console.trace(`Creating new test name from string ${origin_name}`);
+		let result = origin_name;
 		return result;
 	}
 

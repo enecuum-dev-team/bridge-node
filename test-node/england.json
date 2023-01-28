@@ -1,7 +1,9 @@
 {
+	"decimals": 2,
 	"tokens": [{
 		"hash": "1704",
 		"ticker": "PND",
+		"name": "Pound",
 		"decimals": 2
 	}],
 	"ledger": {

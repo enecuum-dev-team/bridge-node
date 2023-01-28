@@ -3,6 +3,8 @@ let Web3 = require('web3');
 
 let erc20_abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
+//BigInt.prototype.toJSON = function() { return this.toString() };
+
 module.exports = class EthereumNetwork extends Network{
 	constructor(network_config){
 		super(network_config);
@@ -82,7 +84,7 @@ module.exports = class EthereumNetwork extends Network{
 				params.ticket.origin_hash = params.ticket.origin_hash.slice(2);
 				console.debug(`origin_hash trimmed to ${params.ticket.origin_hash}`);
 			}
-
+/*
 			let claim_params = [
 				params.ticket.dst_address,
 				params.ticket.dst_network,
@@ -93,17 +95,49 @@ module.exports = class EthereumNetwork extends Network{
 				Buffer.from(params.ticket.origin_hash, 'hex'),
 				params.ticket.origin_network,
 				params.ticket.nonce,
-				"SB_token",
+				params.ticket.name,
+				params.ticket.ticker
+				];
+*/
+
+			let claim_params = [
+				params.ticket.dst_address,
+				params.ticket.dst_network,
+				params.ticket.amount,
+				params.ticket.src_hash,
+				params.ticket.src_address,
+				params.ticket.src_network,
+				params.ticket.origin_hash,
+				params.ticket.origin_network,
+				params.ticket.nonce,
+				params.ticket.name,
 				params.ticket.ticker
 				];
 
-			console.silly(claim_params);
+			console.silly(`claim_params = ${JSON.stringify(claim_params)}`);
+
+			//let signature = [params.validator_sign.v, params.validator_sign.r, params.validator_sign.s];
+			let signature = [];
+
+			console.silly(`signature = ${JSON.stringify(signature)}`);
 			
+//			let claim_tx = bridge_contract.methods.claim(claim_params, [signature]);
 			let claim_tx = bridge_contract.methods.claim(claim_params, []);
 
 			let est_gas = 3000000;
 
-			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address,data:claim_tx.encodeABI(),gas:est_gas}, this.prvkey);
+			let nonce = await this.web3.eth.getTransactionCount(`0xf784C9bca8BbDD93A195aeCdBa23472f89B1E7d6`, 'pending');
+
+			console.trace(`nonce = ${nonce}`);
+
+
+			let gas_price = await this.web3.eth.getGasPrice();
+
+			gas_price = Math.round(gas_price * 1.5);
+
+			console.log(`gas_price = ${gas_price}`);			
+
+			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address,data:claim_tx.encodeABI(),gas:est_gas, gasPrice:gas_price, nonce}, this.prvkey);
 			console.trace(`tx = ${JSON.stringify(tx)}`);
 
 			let receipt = await this.web3.eth.sendSignedTransaction(tx.rawTransaction);
@@ -159,8 +193,9 @@ module.exports = class EthereumNetwork extends Network{
 		  let token_contract = new this.web3.eth.Contract(erc20_abi, hash);
   		let ticker = await token_contract.methods.symbol().call();
   		let decimals = await token_contract.methods.decimals().call();
+  		let name = await token_contract.methods.name().call();
 
-  		let result = {ticker, decimals};
+  		let result = {ticker, decimals, name};
 
   		console.trace(`result = ${result}`);
 
@@ -249,44 +284,53 @@ module.exports = class EthereumNetwork extends Network{
 		try {
 			let receipt = await this.web3.eth.getTransactionReceipt(tx_hash);
 
-			let log_entry = receipt.logs.filter((entry) => {return entry.address === this.contract_address})[0];
-			if (!log_entry){
+			//console.log(receipt);
+
+			let log = receipt.logs.filter((entry) => {return entry.address === this.contract_address});
+			if (!log){
 				console.error(`Failed to retrive log entry for ${this.contract_address}`);
 				console.trace(receipt);
 				return;
 			}
 
+			//console.log(log);
+
 			let topic, params;
 
 			let dst_hash, dst_address, amount;
 
-			if (log_entry.topics.includes('0xab8530f87dc9b59234c4623bf917212bb2536d647574c8e7e5da92c2ede0c9f8')){
-				//mint
-				topic = this.web3.utils.sha3("Claim(address,address,uint256)");
-				params = this.web3.eth.abi.decodeParameters(['address ', 'address', 'uint256'], log_entry.data);
-				
-				console.trace(`Extracted params MINT ${JSON.stringify(params)}`);
+			let event;
 
-				dst_hash = params["0"];
-				dst_address = params["1"];
-				amount = params["2"];
+			log.forEach(log_entry => {
+				if (log_entry.topics.includes('0xab8530f87dc9b59234c4623bf917212bb2536d647574c8e7e5da92c2ede0c9f8')){
+					//mint
+					topic = this.web3.utils.sha3("Claim(address,address,uint256)");
+					params = this.web3.eth.abi.decodeParameters(['address ', 'address', 'uint256'], log_entry.data);
+					
+					console.trace(`Extracted params MINT ${JSON.stringify(params)}`);
 
-			} else if (log_entry.topics.includes('0x6381d9813cabeb57471b5a7e05078e64845ccdb563146a6911d536f24ce960f1')){
-				//unlock
-				topic = this.web3.utils.sha3("Unlock(address,uint256)");
-				params = this.web3.eth.abi.decodeParameters(['address ', 'uint256'], log_entry.data);
+					dst_hash = params["0"];
+					dst_address = params["1"];
+					amount = params["2"];
 
-				console.trace(`Extracted params UNLOCK ${JSON.stringify(params)}`);
+					event = {dst_hash, dst_address, amount};
+				} else if (log_entry.topics.includes('0x6381d9813cabeb57471b5a7e05078e64845ccdb563146a6911d536f24ce960f1')){
+					//unlock
+					topic = this.web3.utils.sha3("Unlock(address,uint256)");
+					params = this.web3.eth.abi.decodeParameters(['address ', 'uint256'], log_entry.data);
 
-				//dst_hash = params["0"];
-				dst_address = params["0"];
-				amount = params["1"];
+					console.trace(`Extracted params UNLOCK ${JSON.stringify(params)}`);
 
-			} else {
-				throw "cannot read Mint or Unlock event by id (maybe topic id is wrong)";				
-			}
+					dst_address = params["0"];
+					amount = params["1"];
+					event = {dst_address, amount};
+				}
+			});
 
-			return {dst_hash, dst_address, amount};
+			if (!event)
+				throw "cannot read Mint or Unlock event by id (maybe topic id is wrong)";
+
+			return event;
 		} catch(e){
 			console.error(e);
 			return null;
@@ -301,10 +345,10 @@ module.exports = class EthereumNetwork extends Network{
 		 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
 
 		 	let params = [];
-		 	params[0] = Buffer.from(src_address, 'hex');
-		 	params[1] = Buffer.from(src_hash, 'hex');
-		 	//params[0] = src_address;
-		 	//params[1] = src_hash;
+		 	//params[0] = Buffer.from(src_address, 'hex');
+		 	//params[1] = Buffer.from(src_hash, 'hex');
+		 	params[0] = src_address;
+		 	params[1] = src_hash;
 		 	params[2] = Number(src_network);
 		 	params[3] = dst_address;
 
@@ -341,7 +385,7 @@ module.exports = class EthereumNetwork extends Network{
 			let tmp = await contract.methods.minted(hash).call();
 	 		console.trace(tmp);
 	 		if (tmp.origin_network != 0){
-	 			minted.push({wrapped_hash : hash, origin_hash : tmp.origin_hash.substring(2), origin_network : tmp.origin_network});
+	 			minted.push({wrapped_hash : hash, origin_hash : tmp.origin_hash/*.substring(2)*/, origin_network : tmp.origin_network});
 	 		}
  		}
 
@@ -349,15 +393,83 @@ module.exports = class EthereumNetwork extends Network{
 	}
 
 	create_ticker_from(origin_ticker){
-		console.trace(`Creating new ticker from string ${origin_ticker}`);
-		let result = origin_ticker.substring(0, 3);
+		console.trace(`Creating new ethereum ticker from string ${origin_ticker}`);
+		let result = 'SB' + origin_ticker;
 		return result;
 	}
 
-	sign(msg){
+	create_name_from(origin_name){
+		console.trace(`Creating new ethereum name from string ${origin_name}`);
+		let result = origin_name;
+		return result;
+	}
+
+	sign(ticket){
+		console.trace(`signing ${JSON.stringify(ticket)}`);
+
 		try {
-			console.error("Sign not implemented");
-			console.trace(`signing ${msg}`);
+			let {amount, dst_address, dst_network, name, nonce, origin_hash, origin_network, src_address, src_network, src_hash, ticker} = ticket;
+			let symbol = ticker;
+			//let values = [dst_address, dst_network, amount.toString(), this.web3.utils.asciiToHex(src_hash), this.web3.utils.asciiToHex(src_address), src_network, this.web3.utils.asciiToHex(origin_hash), origin_network, nonce, name, ticker];
+			//console.trace(`encoding values ${JSON.stringify(values)}`);
+			//let encoded = this.web3.eth.abi.encodeParameters(['address','uint256','uint256','bytes','bytes','uint256','bytes','uint256','uint256','string','string'], values);
+
+/*
+			let values = [dst_address, dst_network, BigInt(amount), src_hash, src_address, src_network, origin_hash, origin_network, nonce, name, ticker];
+			console.trace(`encoding values ${JSON.stringify(values)}`);
+			let encoded = this.web3.eth.abi.encodeParameters(['address','uint256','uint256','string','string','uint256','string','uint256','uint256','string','string'], values);
+*/
+
+			//let values = [dst_address, dst_network, BigInt(amount), src_hash, src_address, src_network, origin_hash, origin_network, nonce, name, ticker];
+			let values = [
+				{value: amount.toString(), type: 'uint256'},
+				{value: dst_address, type: 'address'},
+				{value: dst_network, type: 'uint256'},
+				{value: name, type: 'string'},
+				{value: nonce, type: 'uint256'},
+				{value: origin_hash, type: 'string'},
+				{value: origin_network, type: 'uint256'},
+				{value: src_address, type: 'string'},
+				{value: src_hash, type: 'string'},
+				{value: src_network, type: 'uint256'},
+				{value: symbol, type: 'string'},
+			];
+
+			for (let i = 1; i <= 11; i ++){
+				let sub = values.slice(0, i);
+
+				console.trace(`encoding sub ${JSON.stringify(sub)}`);
+				console.trace(`hashed sub ${this.web3.utils.keccak256(this.web3.utils.encodePacked(...sub))}`);
+			}
+
+
+			console.trace(`encoding values ${JSON.stringify(values)}`);
+			let encoded = this.web3.utils.encodePacked(...values);
+
+			//encoded = encoded.slice(2);
+
+			console.trace(`encoded = ${encoded}`);
+
+			let hashed = this.web3.utils.keccak256(encoded);
+			console.trace(`hashed = ${hashed}`);
+
+			//let hashed2 = this.web3.utils.keccak256(encoded.slice(2));
+			//console.trace(`hashed2 = ${hashed2}`);
+
+			let hashed3 = this.web3.utils.keccak256('0x' + encoded.slice(2).toUpperCase());
+			console.trace(`hashed3 = ${hashed3}`);
+
+			console.trace(`hashed = ${hashed}`);
+
+			let signature = this.web3.eth.accounts.sign(
+    		hashed,
+    		this.prvkey
+			);
+
+			console.trace(`signature = ${JSON.stringify(signature)}`);
+
+			return signature;
+
 		} catch(e){
 			console.error(e);
 			return false;

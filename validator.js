@@ -55,6 +55,25 @@ module.exports = class Node {
 			}
 		});
 
+		this.app.post('/api/v1/debug', async (req, res) => {
+			console.trace(`on debug ${JSON.stringify(req.query)}`);
+
+			let {networkId, txHash} = req.body;
+
+			let response;
+			try {
+				let network_obj = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(networkId)})[0];
+				let result = network_obj.provider.read_claim(txHash);
+
+				response = {result, err:0};
+			} catch(e){
+				console.error(e);
+				response = {err:1};
+			}
+			console.trace(`response = ${JSON.stringify(response)}`);
+			res.send(response);
+		});
+
 		this.app.get('/api/v1/get_dst_decimals', async (req, res) => {
 			console.trace(`on get_dst_decimals ${JSON.stringify(req.query)}`);
 
@@ -161,7 +180,7 @@ module.exports = class Node {
 			} 
 
 			// reading lock information from source network
-			console.info(`Checking lock for ${txHash} at ${src_network.caption}...`);
+			console.info(`Checking lock for ${txHash} at source ${src_network.caption}...`);
 			let lock = await src_network.provider.read_lock(txHash);
 			if (!lock){
 				console.error(`Failed to read lock data for ${txHash}`);
@@ -171,7 +190,7 @@ module.exports = class Node {
 			console.info(`Lock data for ${txHash} = ${JSON.stringify(lock)}`);
 
 			// reading locked token info
-			console.info(`Checking token info for ${lock.src_hash} at ${src_network.caption}...`);
+			console.info(`Checking locked token info for ${lock.src_hash} at source ${src_network.caption}...`);
 			let token_info = await src_network.provider.get_token_info(lock.src_hash);
 			if (!token_info){
 				console.error(`Failed to read token_info for ${lock.src_hash}`);
@@ -189,7 +208,7 @@ module.exports = class Node {
 				return;
 			}
 
-			console.info(`Checking smart contract state at ${src_network.caption}...`);
+			console.info(`Checking smart contract state at source ${src_network.caption}...`);
 			let src_state = await src_network.provider.read_state(lock.src_hash);
 			if (!src_state){
 				console.error(`Failed to read smart contract state at ${src_network.caption}`);
@@ -198,7 +217,7 @@ module.exports = class Node {
 			}
 			console.info(`src_state = ${JSON.stringify(src_state)}`);
 
-			console.info(`Checking transfers at ${dst_network.caption}...`);
+			console.info(`Checking transfers at destination ${dst_network.caption}...`);
 			let transfer = await dst_network.provider.read_transfers(lock.src_address, lock.src_hash, src_state.network_id, lock.dst_address);
 			if (!transfer){
 				console.error(`Failed to read transfers at ${src_network.caption}`);
@@ -221,12 +240,15 @@ module.exports = class Node {
 			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
 			if (src_decimals && dst_decimals){
 				if (dst_decimals < src_decimals){
-					ticket.amount = Number(BigInt(lock.amount) / (BigInt(10) ** BigInt(src_decimals - dst_decimals)));
+					//ticket.amount = BigInt(lock.amount) / (BigInt(10) ** BigInt(src_decimals - dst_decimals));
+					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
 				} else if (src_decimals < dst_decimals){
-					ticket.amount = Number(BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals)));
+					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
 				} else {
-					ticket.amount = lock.amount;
+					ticket.amount = BigInt(lock.amount);
 				}
+
+				ticket.amount = ticket.amount.toString();
 			} else {
 				console.error(`Failed to obtain decimals data`);
 				res.send({err:1});
@@ -242,16 +264,44 @@ module.exports = class Node {
 			//	from source
 			ticket.src_network = src_state.network_id;
 
+			console.info(`Retrieving minted data from ${src_network.caption}...`);
 			let minted_data = src_state.minted.find((minted)=>{console.silly(`${JSON.stringify(minted)}, ${lock.src_hash}`); return minted.wrapped_hash === lock.src_hash});
 			console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
+/*
 			ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
+			ticket.name = 'SB_token';
+*/
+
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;
 				ticket.origin_network = Number(minted_data.origin_network);
+
+				// choose origin network
+				let origin_network_id = Number(minted_data.origin_network);
+				let org_network = config.networks.filter((network) => {return network.network_id === origin_network_id})[0];
+				if (org_network === undefined){
+					console.error(`Failed to select source network - wrong origin_network_id ${origin_network_id}`);
+					throw(`failed to select network`);
+				}
+
+				// reading origin token info
+				console.info(`Checking token info for ${minted_data.origin_hash} at origin ${org_network.caption}...`);
+				let origin_token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
+				if (!origin_token_info){
+					console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
+					throw(`failed to read token info from selected network`);
+				}
+				console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(origin_token_info)}`);
+
+				ticket.ticker = dst_network.provider.create_ticker_from(origin_token_info.ticker);
+				ticket.name = dst_network.provider.create_name_from(origin_token_info.name);
 			} else {
 				ticket.origin_hash = ticket.src_hash;
 				ticket.origin_network = Number(ticket.src_network);
+
+				ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
+				ticket.name = dst_network.provider.create_name_from(token_info.name);
 			}
 
 			//  from destination
@@ -261,6 +311,9 @@ module.exports = class Node {
 			} else {
 				ticket.nonce = 1;
 			}
+
+			//ether workaround, possibly can cause problems with case-sensitive networks
+			ticket.origin_hash = ticket.origin_hash.toLowerCase();
 
 			console.info(`ticket = ${JSON.stringify(ticket)}`);
 
@@ -277,17 +330,30 @@ module.exports = class Node {
 				res.send({});
 			}
 
-			confirmation.validator_sign = dst_network.provider.sign(confirmation.transfer_id);
+			//TODO: workaround
+			if(dst_network.provider.type === "enecuum"){
+				confirmation.validator_sign = dst_network.provider.sign(confirmation.transfer_id);
+			} else {
+				confirmation.validator_sign = dst_network.provider.sign(ticket);
+			}
 
 			// encoded data
 			if (dst_network.provider.type === "enecuum"){
 				confirmation.encoded_data = {};
 				confirmation.encoded_data.enq = {};
+				delete confirmation.ticket.name;
 				confirmation.encoded_data.enq.init = dst_network.provider.encode_init_data(confirmation);
 				confirmation.encoded_data.enq.confirm = dst_network.provider.encode_confirm_data(confirmation);
 			}
 
-			res.send(confirmation);
+			console.trace(`confirmation = ${JSON.stringify(confirmation)}`);
+
+			if (!confirmation.validator_sign){
+				console.error(`signing failed`);
+				res.send({err:1});
+			} else {
+				res.send(confirmation);
+			}
 		});
 	}
 

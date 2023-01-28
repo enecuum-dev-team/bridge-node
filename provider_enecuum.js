@@ -584,6 +584,7 @@ module.exports = class EnecuumNetwork extends Network {
                 let result = {};
                 result.decimals = response[0].decimals;
                 result.ticker = response[0].ticker;
+                result.name = response[0].caption;
                 
                 return result;
             } else {
@@ -597,8 +598,15 @@ module.exports = class EnecuumNetwork extends Network {
     }
 
     create_ticker_from(origin_ticker){
-        console.trace(`Creating new ticker from string ${origin_ticker}`);
-        let result = origin_ticker.substring(0, 4);
+        console.trace(`Creating new enecuum ticker from string ${origin_ticker}`);
+        let result = 'SB' + origin_ticker.substring(0, 4);
+        return result;
+    }
+
+    create_name_from(origin_name){
+        console.trace(`Creating new enecuum name from string ${origin_name}`);
+        //let result = origin_name.substring(0, 40);
+        let result = "wrapped token";
         return result;
     }
 

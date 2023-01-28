@@ -21,8 +21,9 @@ require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss
 
 const CONFIG_FILENAME = `config.json`;
 let config = {
-  tx_confirmation_delay_ms: 60000,
+  tx_confirmation_delay_ms: 120000,
   validators : [{url:"http://localhost:8080/api/v1/notify"}],
+  //validators : [{url:"http://95.216.207.173:80/api/v1/notify"}],
 
   england: {"url" : "http://localhost:8017", "type" : "test", "caption" : "test_1"},
   pound: "1704",
@@ -85,13 +86,13 @@ let get_decimals = async function(network, hash){
   return decimals;
 }
 
-const POUND = config.pound;
-const PESO = config.peso;
-const MARK = config.mark;
+let POUND = config.pound;
+let PESO = config.peso;
+let MARK = config.mark;
 
-const ALICE_PUBKEY = config.alice_pubkey;
-const JOSE_PUBKEY = config.jose_pubkey;
-const HANS_PUBKEY = config.hans_pubkey;
+let ALICE_PUBKEY = config.alice_pubkey;
+let JOSE_PUBKEY = config.jose_pubkey;
+let HANS_PUBKEY = config.hans_pubkey;
 
 let ENGLAND = init_network(config.england);
 let MEXICO = init_network(config.mexico);
@@ -166,11 +167,13 @@ let balance_diff = function(old_balance, new_balance, exclude = []){
     return diff;
 }
 
-let simple_bridge = async function(src_network_obj, src_address, src_hash, amount, dst_network_obj, dst_address){
+let simple_bridge = async function(src_network_obj, src_address, src_hash, amount, dst_network_obj, dst_address, org_network_obj){
     let src_provider = src_network_obj.provider;
     let dst_provider = dst_network_obj.provider;
+    let org_provider = org_network_obj.provider;
     let src_network = src_network_obj.id;
     let dst_network = dst_network_obj.id;
+    let org_network = org_network_obj.id;
 
 
     console.debug(`Checking balance of ${src_address} at ${src_network}`);
@@ -195,7 +198,7 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
 
     let sender_diff = balance_diff(old_sender, new_sender);
     console.info(`sender_diff = ${JSON.stringify(sender_diff)}`);
-    assert(BigInt(sender_diff[src_hash]) === BigInt(-1 * amount), `Sender amount must decrease`);
+    assert(BigInt(sender_diff[src_hash]) === BigInt(BigInt(-1) * amount), `Sender amount must decrease`);
 
     console.debug(`Quering validator with hash ${lock_hash}`);
     let ticket = await http_post(config.validators[0].url, {networkId : src_network, txHash : lock_hash});
@@ -230,7 +233,7 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     let new_receiver = await dst_provider.get_balance(dst_address, claim_data.dst_hash);
     console.info(`new receiver = ${JSON.stringify(new_receiver)}`);
 
-    let exclude = ['0000000000000000000000000000000000000000000000000000000000000000'];
+    let exclude = ['0000000000000000000000000000000000000000000000000000000000000000', '0000000000000000000000000000000000000000000000000000000000000001'];
     let receiver_diff = balance_diff(old_receiver, new_receiver, exclude);
     console.info(`receiver_diff = ${JSON.stringify(receiver_diff)}`);
     assert(Object.values(receiver_diff).length === 1, `Receiver must have changed exactly one value (excluding ${JSON.stringify(exclude)}), has ${Object.values(receiver_diff).length}`);
@@ -243,11 +246,16 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     let dst_token_info = await dst_provider.get_token_info(dst_hash);
     console.debug(`dst_token_info = ${JSON.stringify(dst_token_info)}`);
 
-    let dst_decimals = dst_token_info.decimals;
-
     console.debug(`Reading token_info for ${src_hash} at ${src_network}`);
     let src_token_info = await src_provider.get_token_info(src_hash);
     console.debug(`src_token_info = ${JSON.stringify(src_token_info)}`);
+
+    let org_hash = ticket.ticket.origin_hash;
+    console.debug(`Reading token_info for ${org_hash} at ${org_network}`);
+    let org_token_info = await org_provider.get_token_info(org_hash);
+    console.debug(`org_token_info = ${JSON.stringify(org_token_info)}`);
+
+    let dst_decimals = dst_token_info.decimals;
     let src_decimals = src_token_info.decimals;
 
     console.debug(`dst_amount = ${dst_amount}, src_amount = ${src_amount}, dst_decimals = ${dst_decimals}, src_decimals = ${src_decimals}`);
@@ -258,13 +266,31 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
       assert(BigInt(src_amount) * BigInt(10) ** BigInt(dst_decimals - src_decimals) === BigInt(dst_amount));
     }
 
-    console.info(`Bridge successfull, dst_hash = ${dst_hash}`);
+    let expected_ticker, expected_name;
 
-    return {dst_hash};
+    //TODO make strict comparison
+    if (ticket.ticket.origin_network == ticket.ticket.dst_network){
+      console.debug(`Token supposed to be unlocked`);
+      expected_ticker = org_token_info.ticker;
+      expected_name = org_token_info.name;
+    } else {
+      console.debug(`Token supposed to be minted`);
+      expected_ticker = dst_provider.create_ticker_from(org_token_info.ticker);
+      expected_name = dst_provider.create_name_from(org_token_info.name);
+    }
+
+    assert(dst_token_info.ticker == expected_ticker, `Bad result ticker - ${dst_token_info.ticker}, ${expected_ticker} expected`);
+    assert(dst_token_info.name == expected_name, `Bad result name - ${dst_token_info.name}, ${expected_name} expected`);
+
+    let bridge_result = {hash:dst_hash, decimals:dst_token_info.decimals, ticket: dst_token_info.ticker, name: dst_token_info.name};
+    console.info(`Bridge successfull, bridge_result = ${JSON.stringify(bridge_result)}`);
+
+    return bridge_result;
 }
 
 let absolute = function(display, decimals){
   let result;
+  display = display.toString();
   let point = display.indexOf('.');
   if (point < 0){
     result = display + "0".repeat(decimals);
@@ -299,85 +325,75 @@ describe('happy_case_1', function () {
     console.log('Update complete');
   });
 
-  it(`debug`, async function(){
-    let src_address = '0x03c91e88967465c44aa2afeab3b87dbeede9bd63dbe4a0121ea02fa3f0f4a4e2a8';
-    let src_hash = '0x0000000000000000000000000000000000000000000000000000000000000000';
-    let src_network = 11;
-    let dst_address = '0x1E4d77e8cCd3964ad9b10Bdba00aE593DF1112A1';
-    //let tr = await ENGLAND.provider.read_transfers(src_address, src_hash, src_network, dst_address);
-
-   // console.trace(absolute("0.002", 5));
-
-    assert(absolute("12.3", 5) === BigInt(1230000));
-    assert(absolute("12", 5) === BigInt(1200000));
-    assert(absolute("12.00000000000", 5) === BigInt(1200000));
-    assert(absolute("0.002", 5) === BigInt(200));
-
-    //console.log(tr);
+  it.skip(`debug`, async function(){
+    let msg = "hello";
+    console.fatal(msg);
+    console.info('hello');
   });
 
-  it.only('forward test', async function() {
+  it('forward test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
-    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 3e15, MEXICO, JOSE_PUBKEY);
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
+
   });
 
   it('backward test', async function() {
     console.log(`===== MEXICO TO ENGLAND =========================================`);
 
-    let bridge1 = await simple_bridge(MEXICO, JOSE_PUBKEY, PESO, 200, ENGLAND, ALICE_PUBKEY);
+    let bridge1 = await simple_bridge(MEXICO, JOSE_PUBKEY, PESO, absolute(2, PESO_DECIMALS), ENGLAND, ALICE_PUBKEY, MEXICO);
   });
 
   it('forth and back test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
-    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 4e15, MEXICO, JOSE_PUBKEY);
-    let mexican_pound = bridge1.dst_hash;
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
+    let mexican_pound = bridge1;
 
     console.log(`===== MEXICO TO ENGLAND =========================================`);
 
-    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 4, ENGLAND, ALICE_PUBKEY);
-    assert(POUND === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
+    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound.hash, absolute(3, mexican_pound.decimals), ENGLAND, ALICE_PUBKEY, ENGLAND);
+    assert(POUND === bridge2.hash, `Reverse transfer must unlock`);
   });
 
   it('back and forth test', async function() {
     console.log(`===== MEXICO TO ENGLAND =========================================`);
 
-    let bridge1 = await simple_bridge(MEXICO, JOSE_PUBKEY, PESO, 5, ENGLAND, ALICE_PUBKEY);
-    let british_peso = bridge1.dst_hash;
+    let bridge1 = await simple_bridge(MEXICO, JOSE_PUBKEY, PESO, absolute(5, PESO_DECIMALS), ENGLAND, ALICE_PUBKEY, MEXICO);
+    let british_peso = bridge1;
 
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
-    let bridge2 = await simple_bridge(ENGLAND, ALICE_PUBKEY, british_peso, 4e15, MEXICO, JOSE_PUBKEY);
-    assert(PESO === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
+    let bridge2 = await simple_bridge(ENGLAND, ALICE_PUBKEY, british_peso.hash, absolute(3, british_peso.decimals), MEXICO, JOSE_PUBKEY, MEXICO);
+    assert(PESO === bridge2.hash, "Reverse transfer must unlock, not mint");
   });
 
-  it('round logic test', async function () {
+  it.only('round logic test', async function () {
 
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
-    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 5e15, MEXICO, JOSE_PUBKEY);
-    let mexican_pound = bridge1.dst_hash;
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(7, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
+    let mexican_pound = bridge1;
 
     console.log(`===== MEXICO TO ENGLAND =========================================`);
 
-    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 3, ENGLAND, ALICE_PUBKEY);
-    assert(POUND === bridge2.dst_hash, "Reverse transfer must unlock, not mint");
+    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound.hash, absolute(3, mexican_pound.decimals), ENGLAND, ALICE_PUBKEY, ENGLAND);
+    assert(POUND === bridge2.hash, "Reverse transfer must unlock, not mint");
 
     console.log(`===== MEXICO TO GERMANY =========================================`);
 
-    let bridge3 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound, 2, GERMANY, HANS_PUBKEY);
-    let german_pound = bridge3.dst_hash;
+    let bridge3 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_pound.hash, absolute(3, mexican_pound.decimals), GERMANY, HANS_PUBKEY, ENGLAND);
+    let german_pound = bridge3;
 
     console.log(`===== ENGLAND TO GERMANY ========================================`);
 
-    let bridge4 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, 5e14, GERMANY, HANS_PUBKEY);
-    assert (bridge4.dst_hash === german_pound, "two-way transfers must merge tokens");
+    let bridge4 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(5, POUND_DECIMALS), GERMANY, HANS_PUBKEY, ENGLAND);
+    assert (bridge4.hash === german_pound.hash, "two-way transfers must merge tokens");
 
     console.log(`===== GERMANY TO ENGLAND ========================================`);
 
-    let bridge5 = await simple_bridge(GERMANY, HANS_PUBKEY, german_pound, 6, ENGLAND, ALICE_PUBKEY);
-    assert(POUND === bridge5.dst_hash, "Circular transfer must unlock, not mint");
+    let bridge5 = await simple_bridge(GERMANY, HANS_PUBKEY, german_pound.hash, absolute(3, german_pound.decimals), ENGLAND, ALICE_PUBKEY, ENGLAND);
+    assert(POUND === bridge5.hash, "Circular transfer must unlock, not mint");
 
     return 0;
   });
