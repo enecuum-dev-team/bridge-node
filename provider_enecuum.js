@@ -613,6 +613,8 @@ module.exports = class EnecuumNetwork extends Network {
 
     create_ticker_from(origin_ticker){
         console.trace(`Creating new enecuum ticker from string ${origin_ticker}`);
+
+        origin_ticker = origin_ticker.replace(/[^a-z]/gi, '');
         let result = 'SB' + origin_ticker.substring(0, 4);
         return result;
     }
