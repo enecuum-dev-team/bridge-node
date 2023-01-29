@@ -14,6 +14,12 @@ function ecdsa_sign(skey, msg){
         return sig.sign();
 }
 
+let trim_0x = function(str){
+    if (str.startsWith('0x'))
+        return str.slice(2);
+    return str;
+}
+
 let http_get = function(url){
                 return new Promise(function (resolve, reject) {
                         let req = http.get(url, function (res) {
@@ -258,6 +264,10 @@ module.exports = class TestNetwork extends Network{
 		let minted = null;
 		try {
 			minted = await http_get(`${this.url}/api/v1/minted`);
+
+			minted.forEach(t => {
+                		t.origin_hash = trim_0x(t.origin_hash);
+            		});
 		} catch(e){
 			console.error(e);
 		}
@@ -271,6 +281,10 @@ module.exports = class TestNetwork extends Network{
 
  		return {network_id, minted, known_networks};
 	}
+
+	async add_known_token(hash){
+        	//mock
+    	}
 
 	create_ticker_from(origin_ticker){
 		console.trace(`Creating new test ticker from string ${origin_ticker}`);

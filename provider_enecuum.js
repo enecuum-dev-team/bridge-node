@@ -8,6 +8,12 @@ let request = require("request");
 let crypto = require('crypto');
 let zlib = require('zlib');
 
+let trim_0x = function(str){
+    if (str.startsWith('0x'))
+        return str.slice(2);
+    return str;
+}
+
 function ecdsa_sign(skey, msg) {
     var sig = new rsasign.Signature({ alg: "SHA256withECDSA" });
     let sigdata = { d: skey, curve: "secp256k1" };
@@ -528,6 +534,10 @@ module.exports = class EnecuumNetwork extends Network {
         }
     }
 
+    async add_known_token(hash){
+        //mock
+    }
+
     async get_minted_tokens (url=this.url) {
         console.trace(`Reading minted tokens at ${url}`)
         let minted_tokens = [];
@@ -539,7 +549,13 @@ module.exports = class EnecuumNetwork extends Network {
         }
 
         try {
-            return JSON.parse(minted_tokens);
+            minted_tokens = JSON.parse(minted_tokens);
+
+            minted_tokens.forEach(t => {
+                t.origin_hash = trim_0x(t.origin_hash);
+            });
+
+            return minted_tokens;
         } catch(e){
             console.warn(`minted tokens - failed to parse response from ${request_url}`);
             return [];

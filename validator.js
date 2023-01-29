@@ -16,6 +16,11 @@ let calculate_transfer_id = function(ticket){
 	return transfer_id;
 }
 
+let trim_0x = function(str){
+    if (str.startsWith('0x'))
+        return str.slice(2);
+    return str;
+}
 
 let decimals = [];
 decimals[1] = 10;
@@ -305,6 +310,7 @@ module.exports = class Node {
 
 			//ether workaround, possibly can cause problems with case-sensitive networks
 			ticket.origin_hash = ticket.origin_hash.toLowerCase();
+			ticket.origin_hash = trim_0x(ticket.origin_hash);
 
 			console.info(`ticket = ${JSON.stringify(ticket)}`);
 

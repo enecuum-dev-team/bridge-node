@@ -5,6 +5,12 @@ let erc20_abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor
 
 //BigInt.prototype.toJSON = function() { return this.toString() };
 
+let trim_0x = function(str){
+    if (str.startsWith('0x'))
+        return str.slice(2);
+    return str;
+}
+
 module.exports = class EthereumNetwork extends Network{
 	constructor(network_config){
 		super(network_config);
@@ -136,6 +142,12 @@ module.exports = class EthereumNetwork extends Network{
 		return claim_init_hash;
 	}
 
+	async add_known_token(hash){
+		if (!this.known_tokens.includes(hash)){
+			this.known_tokens.push(hash)
+		}
+	}
+
 	async get_balance(address, hash){
 		console.trace(`Reading account ${address} at ${this.caption}`);
 
@@ -178,7 +190,7 @@ module.exports = class EthereumNetwork extends Network{
 
   		let result = {ticker, decimals, name};
 
-  		console.trace(`result = ${result}`);
+  		console.trace(`result = ${JSON.stringify(result)}`);
 
   		return result;
 
@@ -361,7 +373,7 @@ module.exports = class EthereumNetwork extends Network{
 			let tmp = await contract.methods.minted(hash).call();
 	 		console.trace(tmp);
 	 		if (tmp.origin_network != 0){
-	 			minted.push({wrapped_hash : hash, origin_hash : tmp.origin_hash/*.substring(2)*/, origin_network : tmp.origin_network});
+	 			minted.push({wrapped_hash : hash, origin_hash : trim_0x(tmp.origin_hash), origin_network : tmp.origin_network});
 	 		}
  		}
 
