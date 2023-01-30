@@ -236,26 +236,6 @@ module.exports = class Node {
 			//creating confirmation
 			let ticket = {};
 
-			let src_decimals = token_info.decimals;
-			let dst_decimals = decimals[dst_network.network_id];
-
-			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
-			if (src_decimals && dst_decimals){
-				if (dst_decimals < src_decimals){
-					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
-				} else if (src_decimals < dst_decimals){
-					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
-				} else {
-					ticket.amount = BigInt(lock.amount);
-				}
-
-				ticket.amount = ticket.amount.toString();
-			} else {
-				console.error(`Failed to obtain decimals data`);
-				res.send({err:1});
-				return;
-			}
-
 			//	from lock
 			ticket.dst_address = lock.dst_address;
 			ticket.dst_network = lock.dst_network;
@@ -299,6 +279,50 @@ module.exports = class Node {
 				ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
 				ticket.name = dst_network.provider.create_name_from(token_info.name);
 			}
+
+			// AMOUNT
+			let src_decimals = token_info.decimals;
+			let dst_decimals;
+
+			if (minted_data){
+				console.info(`Source token is minted, checking direction ${minted_data.origin_network} and ${lock.dst_network}`)
+				if (minted_data.origin_network == lock.dst_network){
+					console.info(`Token is returning to origin network, reading original token decimals`)
+
+					console.info(`Checking token info for ${minted_data.origin_hash} at origin ${dst_network.caption}...`);
+					let origin_token_info = await dst_network.provider.get_token_info(minted_data.origin_hash);
+					if (!origin_token_info){
+						console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
+						throw(`failed to read token info from selected network`);
+					}
+					console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(origin_token_info)}`);
+
+					dst_decimals = origin_token_info.decimals;
+				} else {
+					dst_decimals = decimals[dst_network.network_id];
+				}
+			} else {
+				dst_decimals = decimals[dst_network.network_id];
+			}
+
+			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
+			if (src_decimals && dst_decimals){
+				if (dst_decimals < src_decimals){
+					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
+				} else if (src_decimals < dst_decimals){
+					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
+				} else {
+					ticket.amount = BigInt(lock.amount);
+				}
+
+				ticket.amount = ticket.amount.toString();
+			} else {
+				console.error(`Failed to obtain decimals data`);
+				res.send({err:1});
+				return;
+			}
+
+			// NONCE
 
 			//  from destination
 			if (transfer[0]){
