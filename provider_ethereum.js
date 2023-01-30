@@ -38,7 +38,7 @@ module.exports = class EthereumNetwork extends Network{
 			let {dst_address, dst_network, amount, src_hash, src_address} = params;
 
 			let erc20_contract = new this.web3.eth.Contract(erc20_abi, src_hash);
-			let allowance = await erc20_contract.methods.allowance(src_address, this.contract_address).call();
+			let allowance = await erc20_contract.methods.allowance(src_address, this.vault_address).call();
 
 			console.trace(`${src_hash} allowance = ${allowance}`);
 
