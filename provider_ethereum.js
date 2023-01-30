@@ -18,6 +18,7 @@ module.exports = class EthereumNetwork extends Network{
 
 		this.abi = network_config.abi;
 		this.contract_address = network_config.contract_address;
+		this.vault_address = network_config.vault_address;
 		this.prvkey = network_config.prvkey;
 		this.known_tokens = network_config.known_tokens;
 
@@ -43,7 +44,7 @@ module.exports = class EthereumNetwork extends Network{
 
 			if (allowance < amount){
 				console.trace(`allowance too low, increasing...`);
-				let allowance_tx = erc20_contract.methods.approve(this.contract_address, amount);
+				let allowance_tx = erc20_contract.methods.approve(this.vault_address, amount);
 
 				let tx = await this.web3.eth.accounts.signTransaction({to:src_hash, data:allowance_tx.encodeABI(), gas:est_gas}, this.prvkey);
 				console.trace(`tx = ${JSON.stringify(tx)}`);
