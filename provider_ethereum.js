@@ -188,7 +188,7 @@ module.exports = class EthereumNetwork extends Network{
   		let decimals = await token_contract.methods.decimals().call();
   		let name = await token_contract.methods.name().call();
 
-  		let result = {ticker, decimals, name};
+  		let result = {ticker, decimals: Number(decimals), name};
 
   		console.trace(`result = ${JSON.stringify(result)}`);
 
