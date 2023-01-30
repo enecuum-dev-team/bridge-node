@@ -205,7 +205,7 @@ module.exports = class Node {
 			console.info(`Token info for ${lock.src_hash} = ${JSON.stringify(token_info)}`);
 
 			// choose destination network
-			let dst_network = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(lock.dst_network)})[0];
+			let dst_network = config.networks.filter((network) => {return Number(network.network_id) === Number(lock.dst_network)})[0];
 
 			if (dst_network === undefined){
 				console.error(`Failed to select destination network - ${lock.dst_network}`);
