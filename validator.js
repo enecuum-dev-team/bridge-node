@@ -85,29 +85,8 @@ module.exports = class Node {
 			let response;
 			try {
 				let {hash, src_network_id, dst_network_id} = req.query;
-	
-				let dst_decimals = decimals[dst_network_id];
 
-				if (dst_decimals){
-					response = {result:{dst_decimals}, err : 0};
-				} else {
-					throw "failed to retrieve decimals";
-				}
-
-			} catch(e){
-				console.error(e);
-				response = {err:1};
-			}
-			console.trace(`response = ${JSON.stringify(response)}`);
-			res.send(response);
-		});
-
-		this.app.get('/api/v1/get_dst_decimals1', async (req, res) => {
-			console.trace(`on get_dst_decimals1 ${JSON.stringify(req.query)}`);
-
-			let response;
-			try {
-				let {hash, src_network_id, dst_network_id} = req.query;
+				let dst_decimals;
 	
 				// choose source network
 				let src_network = config.networks.filter((network) => {return network.network_id === Number(src_network_id)})[0];
@@ -128,40 +107,34 @@ module.exports = class Node {
 				console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
 				if (minted_data){
-					// choose origin network
-					let origin_network_id = Number(minted_data.origin_network);
-					let org_network = config.networks.filter((network) => {return network.network_id === origin_network_id})[0];
-					if (org_network === undefined){
-						console.error(`Failed to select source network - wrong origin_network_id ${origin_network_id}`);
-						throw(`failed to select network`);
-					}
+					console.info(`Source token is minted, checking direction ${minted_data.origin_network} and ${dst_network_id}`)
+					if (minted_data.origin_network == dst_network_id){
+						console.info(`Token is returning to origin network, reading original token decimals`)
 
-					// reading origin token info
-					console.info(`Checking token info for ${minted_data.origin_hash} at ${org_network.caption}...`);
-					let token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
-					if (!token_info){
-						console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
-						throw(`failed to read token info from selected network`);
-					}
-					console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(token_info)}`);
+						let dst_network = config.networks.filter((network) => {return Number(network.network_id) === Number(dst_network_id)})[0];
 
-					let dst_decimals = token_info.decimals;
-					console.trace(`dst_decimals = ${dst_decimals}`);
-					if (dst_decimals){
-						response = {result: {dst_decimals}, err:0};
+						if (dst_network === undefined){
+							console.error(`Failed to select destination network - ${lock.dst_network}`);
+							res.send({err:1});
+							return;
+						}
+
+						console.info(`Checking token info for ${minted_data.origin_hash} at origin ${dst_network_id}...`);
+						let origin_token_info = await dst_network.provider.get_token_info(minted_data.origin_hash);
+						if (!origin_token_info){
+							console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
+							throw(`failed to read token info from selected network`);
+						}
+						console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(origin_token_info)}`);
+
+						dst_decimals = origin_token_info.decimals;
 					} else {
-						throw "Cannot read decimals from token_info";
+						dst_decimals = decimals[dst_network.network_id];
 					}
-
 				} else {
-					let dst_decimals = decimals[dst_network_id];
-					console.trace(`dst_decimals = ${dst_decimals}`);
-					if (dst_decimals){
-						response = {result: {dst_decimals}, err:0};
-					} else {
-						throw "Cannot read decimals from dst_network";
-					}
+					dst_decimals = decimals[dst_network_id];
 				}
+				response = {result:{dst_decimals}, err:0}
 			} catch(e){
 				console.error(e);
 				response = {err:1};
