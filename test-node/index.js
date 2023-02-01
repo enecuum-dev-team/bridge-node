@@ -93,12 +93,22 @@ let get_amount = function(address, hash){
 	}
 }
 
+let move_amount = function(from, to, hash, amount){
+	if (state.ledger.from < amount){
+		console.error(`Not enough funds: ledger[${from}][${hash}] < ${amount}`);
+		throw `Not enough funds`;
+	} else {
+		add_amount(from, hash, -1 * amount);
+		add_amount(to, hash, amount);
+	}
+}
+
 let add_amount = function(address, hash, amount){
 	if (state.ledger[address]){
 		if (state.ledger[address][hash]){
-			let upd = state.ledger[address][hash] += Number(amount);
+			let upd = state.ledger[address][hash] + Number(amount);
 			if (upd < 0){
-				console.fatal(`Negative ledger[${address}][${hash}] = ${upd}`);
+				console.error(`Negative ledger[${address}][${hash}] = ${upd}`);
 			} else {
 				state.ledger[address][hash] = upd;
 			}
@@ -175,8 +185,7 @@ app.post('/api/v1/claim', async (req, res) => {
 			} else {
 				if (Number(origin_network) === config.network_id){
 					console.debug(`Unlocking old token`);
-					add_amount(SMART_ADDRESS, origin_hash, -1 * amount);
-					add_amount(dst_address, origin_hash, amount);
+					move_amount(SMART_ADDRESS, dst_address, origin_hash, amount);
 					transactions[tx_hash] = {dst_hash:origin_hash};
 				} else {	
 					let minted_i = minted.findIndex((m) => {return (m.origin_hash === origin_hash) && (m.origin_network === origin_network)});

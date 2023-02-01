@@ -5,10 +5,22 @@
 		"ticker": "PND",
 		"name": "Pound",
 		"decimals": 2
+	},{
+		"hash": "1705",
+		"ticker": "REAL",
+		"name": "Real",
+		"decimals": 1
+	},{
+		"hash": "1706",
+		"ticker": "Ginea",
+		"name": "Guinez",
+		"decimals": 3
 	}],
 	"ledger": {
 		"1702":{
-			"1704":10000
+			"1704":10000,
+			"1705":10000,
+			"1706":10000
 		}
 	},
 	"known_networks":[
