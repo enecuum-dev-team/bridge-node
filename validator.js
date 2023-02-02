@@ -231,6 +231,9 @@ module.exports = class Node {
 			let minted_data = src_state.minted.find((minted)=>{return minted.wrapped_hash === lock.src_hash});
 			console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
+			let ticker;
+			let name;
+
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;
 				ticket.origin_network = Number(minted_data.origin_network);
@@ -252,14 +255,23 @@ module.exports = class Node {
 				}
 				console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(origin_token_info)}`);
 
-				ticket.ticker = dst_network.provider.create_ticker_from(origin_token_info.ticker);
-				ticket.name = dst_network.provider.create_name_from(origin_token_info.name);
+				ticker = origin_token_info.ticker;
+				name = origin_token_info.name;
 			} else {
 				ticket.origin_hash = ticket.src_hash;
 				ticket.origin_network = Number(ticket.src_network);
 
-				ticket.ticker = dst_network.provider.create_ticker_from(token_info.ticker);
-				ticket.name = dst_network.provider.create_name_from(token_info.name);
+				ticker = token_info.ticker;
+				name = token_info.name;
+			}
+
+			ticket.ticker = dst_network.provider.create_ticker_from(ticker);
+
+			if (name){
+				ticket.name = dst_network.provider.create_name_from(name);
+			} else {
+				console.info(`No souce token name provided`);
+				ticket.name = dst_network.provider.create_name_from("");
 			}
 
 			// AMOUNT
