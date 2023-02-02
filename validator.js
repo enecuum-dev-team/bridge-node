@@ -63,12 +63,21 @@ module.exports = class Node {
 		this.app.post('/api/v1/debug', async (req, res) => {
 			console.trace(`on debug ${JSON.stringify(req.query)}`);
 
-			let {networkId, txHash} = req.body;
+			let networkId = 97;
 
+	
 			let response;
 			try {
 				let network_obj = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(networkId)})[0];
-				let result = network_obj.provider.read_claim(txHash);
+
+				let {src_address, src_hash, src_network, dst_address} = {
+					src_address: "03ee3c33589b1a4409b722fe85d3e76690a7779e860ce9926fa74a9c06fa4658ac",
+					src_hash: "0000000000000000000000000000000000000000000000000000000000000001",
+					src_network:1,
+					dst_address:"0x9b3f74094cc459249046c27457fffec837fd5f57"};
+
+
+				let result = await network_obj.provider.read_transfers(src_address, src_hash, src_network, dst_address);
 
 				response = {result, err:0};
 			} catch(e){
@@ -219,7 +228,7 @@ module.exports = class Node {
 			ticket.src_network = src_state.network_id;
 
 			console.info(`Retrieving minted data from ${src_network.caption}...`);
-			let minted_data = src_state.minted.find((minted)=>{console.silly(`${JSON.stringify(minted)}, ${lock.src_hash}`); return minted.wrapped_hash === lock.src_hash});
+			let minted_data = src_state.minted.find((minted)=>{return minted.wrapped_hash === lock.src_hash});
 			console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
 			if (minted_data){
