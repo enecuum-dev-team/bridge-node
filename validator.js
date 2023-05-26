@@ -7,7 +7,7 @@ let EnecuumNetwork = require('./provider_enecuum.js');
 let TestNetwork = require('./provider_test.js');
 
 let calculate_transfer_id = function(ticket){
-	let param_names = ["dst_address", "dst_network", "amount", "src_hash", "src_address", "src_network", "origin_hash", "origin_network", "nonce", "ticker"];
+	let param_names = ["dst_address", "dst_network", "amount", "src_hash", "src_address", "src_network", "origin_hash", "origin_network", "nonce", "ticker", "origin_decimals", "name"];
 
 	let params_str = param_names.map(v => crypto.createHash('sha256').update(ticket[v].toString().toLowerCase()).digest('hex')).join("");
 
@@ -30,6 +30,7 @@ decimals[23] = 3;
 decimals[29] = 4;
 decimals[97] = 18;
 decimals[66] = 10;
+decimals[123] = 10;
 decimals[80001] = 18;
 
 module.exports = class Node {
@@ -42,13 +43,13 @@ module.exports = class Node {
 
 		this.app.post('/api/v1/encode_lock', async (req, res) => {
 			console.trace('on encode_lock', req.body);
-			let {dst_address, dst_network, amount, src_hash, src_network} = req.body;
+			let {dst_address, dst_network, amount, src_hash, src_network, nonce} = req.body;
 
 			try {
 				let src_network_obj = config.networks.filter((network) => {return BigInt(network.network_id) === BigInt(src_network)})[0];
 
 				if (src_network_obj){	
-					let encoded_data = src_network_obj.provider.encode_lock_data({dst_address, dst_network, amount, src_hash});
+					let encoded_data = src_network_obj.provider.encode_lock_data({dst_address, dst_network, amount, src_hash, nonce});
 					let result = {encoded_data};
 					res.send(result);
 				} else {
@@ -204,17 +205,6 @@ module.exports = class Node {
 			}
 			console.info(`src_state = ${JSON.stringify(src_state)}`);
 
-			console.info(`Checking transfers at destination ${dst_network.caption}...`);
-			let transfer = await dst_network.provider.read_transfers(lock.src_address, lock.src_hash, src_state.network_id, lock.dst_address);
-			if (!transfer){
-				console.error(`Failed to read transfers at ${src_network.caption}`);
-				res.send({err:1});
-				return;
-			} else {
-
-			}
-			console.info(`Transfer = ${JSON.stringify(transfer)}`);
-
 			//creating confirmation
 			let ticket = {};
 
@@ -223,6 +213,7 @@ module.exports = class Node {
 			ticket.dst_network = lock.dst_network;
 			ticket.src_hash = lock.src_hash;
 			ticket.src_address = lock.src_address;
+			ticket.nonce = lock.nonce;
 
 			//	from source
 			ticket.src_network = src_state.network_id;
@@ -233,6 +224,7 @@ module.exports = class Node {
 
 			let ticker;
 			let name;
+			let origin_decimals;
 
 			if (minted_data){
 				ticket.origin_hash = minted_data.origin_hash;
@@ -257,12 +249,15 @@ module.exports = class Node {
 
 				ticker = origin_token_info.ticker;
 				name = origin_token_info.name;
+				origin_decimals = origin_token_info.decimals;
 			} else {
 				ticket.origin_hash = ticket.src_hash;
 				ticket.origin_network = Number(ticket.src_network);
 
 				ticker = token_info.ticker;
 				name = token_info.name;
+				origin_decimals = token_info.decimals;
+				console.debug(`minted_data not specified, result = ${JSON.stringify({ticker, name, origin_decimals})}`);
 			}
 
 			ticket.ticker = dst_network.provider.create_ticker_from(ticker);
@@ -273,6 +268,8 @@ module.exports = class Node {
 				console.info(`No souce token name provided`);
 				ticket.name = dst_network.provider.create_name_from("");
 			}
+
+			ticket.origin_decimals = origin_decimals;
 
 			// AMOUNT
 			let src_decimals = token_info.decimals;
@@ -319,12 +316,13 @@ module.exports = class Node {
 			// NONCE
 
 			//  from destination
+			/*
 			if (transfer[0]){
 				console.silly(`incrementing transfer nonce ${transfer[0].nonce}`);
 				ticket.nonce = Number(transfer[0].nonce) + 1;
 			} else {
 				ticket.nonce = 1;
-			}
+			}*/
 
 			//ether workaround, possibly can cause problems with case-sensitive networks
 			ticket.origin_hash = ticket.origin_hash.toLowerCase();
@@ -356,7 +354,7 @@ module.exports = class Node {
 			if (dst_network.provider.type === "enecuum"){
 				confirmation.encoded_data = {};
 				confirmation.encoded_data.enq = {};
-				delete confirmation.ticket.name;
+				//delete confirmation.ticket.name;
 				confirmation.encoded_data.enq.init = dst_network.provider.encode_init_data(confirmation);
 				confirmation.encoded_data.enq.confirm = dst_network.provider.encode_confirm_data(confirmation);
 			}

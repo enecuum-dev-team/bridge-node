@@ -31,7 +31,7 @@
       "ignore_watch": ["log", ".idea"],
       "args": "--config config.json.example --port 8080",
       "merge_logs": true,
-      "log_file" : "log/germany.log"
+      "log_file" : "log/validator.log"
     }]
 }
   

@@ -194,7 +194,8 @@ module.exports = class EnecuumNetwork extends Network {
             "dst_address",
             "dst_network",
             "amount",
-            "hash"
+            "hash",
+            "nonce"
         ];
 
         let args = {};
@@ -203,6 +204,7 @@ module.exports = class EnecuumNetwork extends Network {
         args.dst_network = Number(params.dst_network);
         args.amount = params.amount.toString();
         args.hash = params.src_hash;
+        args.nonce = Number(params.nonce);
 
         try {
             console.trace(`args = ${JSON.stringify(args)}`);
@@ -226,6 +228,8 @@ module.exports = class EnecuumNetwork extends Network {
             "nonce",
             "transfer_id",
             "ticker",
+            "origin_decimals",
+            "name",
         ];
 
         let type = "claim_init";
@@ -284,7 +288,8 @@ module.exports = class EnecuumNetwork extends Network {
             "dst_address",
             "dst_network",
             "amount",
-            "hash"
+            "hash",
+            "nonce"
         ];
 
         let type = "lock";
@@ -295,6 +300,7 @@ module.exports = class EnecuumNetwork extends Network {
         args.dst_network = Number(params.dst_network);
         args.amount = params.amount.toString();
         args.hash = params.src_hash;
+        args.nonce = params.nonce;
 
         let parameters = args;
 
@@ -324,6 +330,8 @@ module.exports = class EnecuumNetwork extends Network {
             "nonce",
             "transfer_id",
             "ticker",
+            "origin_decimals",
+            "name"
         ];
 
         let args = {};
@@ -381,6 +389,9 @@ module.exports = class EnecuumNetwork extends Network {
             return false;
         }
 
+        if (!response.status)
+            return false;
+
         if (response.status === 3){
             return true;
         } else {
@@ -390,19 +401,25 @@ module.exports = class EnecuumNetwork extends Network {
     
     async wait_claim(tx_hash) {
         console.trace(`Waiting for transaction ${tx_hash} at ${this.caption}`);
+
+        let response;
         
         try {
             let url = `${this.url}/api/v1/tx?hash=${tx_hash}`;
 
-            let response = await http_get(url);
+            response = await http_get(url);
             response = JSON.parse(response);
-            if (response.status === 3){
-                return true;
-            } else {
-                return false;
-            }
         } catch(e){
             return false;
+        }
+
+        if (!response.status)
+            return false;
+
+        if (response.status === 3){
+            return true;
+        } else {
+            throw `TX ${tx_hash} rejected with status ${response.status}`;
         }
     }
 
@@ -454,8 +471,9 @@ module.exports = class EnecuumNetwork extends Network {
                 let amount = decompressed.amount;
                 let src_hash = decompressed.hash;
                 let src_address = tx_info.from;
+                let nonce = Number(decompressed.nonce);
 
-                let result = { dst_address, dst_network, amount, src_hash, src_address };
+                let result = { dst_address, dst_network, amount, src_hash, src_address, nonce };
 
                 console.trace(`result = ${JSON.stringify(result)}`);
 
@@ -490,29 +508,22 @@ module.exports = class EnecuumNetwork extends Network {
         return { network_id, minted };
     }
 
-    async read_transfers (src_address, src_hash, src_network, dst_address) {
-        console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
+    async read_transfers (params) {
+        console.trace(`Extracting transfers for ${JSON.stringify(params)} at ${this.caption}`);
+
+        let {src_address, src_hash, dst_network, dst_address} = params;
 
         try {
-            let url = `${this.url}/api/v1/bridge_last_transfer?dst_address=${dst_address}&src_address=${src_address}&src_network=${src_network}&src_hash=${src_hash}`;
+            //let url = `${this.url}/api/v1/bridge_last_transfer?dst_address=${dst_address}&src_address=${src_address}&src_network=${src_network}&src_hash=${src_hash}`;
+            let url = `${this.url}/api/v1/bridge_last_lock_transfer?dst_address=${dst_address}&src_address=${src_address}&dst_network=${dst_network}&src_hash=${src_hash}`;
             console.trace(`url = ${url}`);
             let response = await http_get(url);
 
             console.trace(`response = '${response}'`);
 
-            let result = JSON.parse(response);
+            let nonce = Number(response);
 
-            if (!Array.isArray(result)){
-                console.warn(`get ${url} returned wrong response - array expected`);
-                return null;
-            }
-
-            if (result.length < 2){
-                return result;
-            } else {
-                console.warn(`result should be empty or single-element array`)
-                return null;
-            }
+            return nonce;
         } catch(e){
             console.warn(e);
             return null;
@@ -621,8 +632,9 @@ module.exports = class EnecuumNetwork extends Network {
 
     create_name_from(origin_name){
         console.trace(`Creating new enecuum name from string ${origin_name}`);
-        //let result = origin_name.substring(0, 40);
-        let result = "wrapped token";
+        origin_name = origin_name.replace(/[^a-z]/gi, '');
+        let result = origin_name.substring(0, 20);
+        //let result = "wrapped token";
         return result;
     }
 

@@ -17,8 +17,12 @@ module.exports = class EthereumNetwork extends Network{
 		this.type = "ethereum";
 
 		this.abi = network_config.abi;
+		this.storage_abi = network_config.storage_abi;
+
 		this.contract_address = network_config.contract_address;
 		this.vault_address = network_config.vault_address;
+		this.storage_address = network_config.storage_address;
+
 		this.prvkey = network_config.prvkey;
 		this.known_tokens = network_config.known_tokens;
 
@@ -32,10 +36,11 @@ module.exports = class EthereumNetwork extends Network{
 	async send_lock(params){
 		console.trace(`Sending lock with params ${JSON.stringify(params)} at ${this.caption}`);
 
-		let est_gas = 300000;
+		let gas = 300000;
+		let gasLimit = 1e6;
 
 		try {
-			let {dst_address, dst_network, amount, src_hash, src_address} = params;
+			let {dst_address, dst_network, amount, src_hash, src_address, nonce} = params;
 
 			let erc20_contract = new this.web3.eth.Contract(erc20_abi, src_hash);
 			let allowance = await erc20_contract.methods.allowance(src_address, this.vault_address).call();
@@ -46,7 +51,7 @@ module.exports = class EthereumNetwork extends Network{
 				console.trace(`allowance too low, increasing...`);
 				let allowance_tx = erc20_contract.methods.approve(this.vault_address, amount);
 
-				let tx = await this.web3.eth.accounts.signTransaction({to:src_hash, data:allowance_tx.encodeABI(), gas:est_gas}, this.prvkey);
+				let tx = await this.web3.eth.accounts.signTransaction({to:src_hash, data:allowance_tx.encodeABI(), gas, gasLimit}, this.prvkey);
 				console.trace(`tx = ${JSON.stringify(tx)}`);
 
 				let receipt = await this.web3.eth.sendSignedTransaction(tx.rawTransaction);
@@ -56,10 +61,10 @@ module.exports = class EthereumNetwork extends Network{
 			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
 			let lock_params = [
 					this.web3.utils.asciiToHex(dst_address),
-					//Buffer.from(dst_address),
 					dst_network,
 					amount,
-					src_hash
+					src_hash,
+					Number(nonce)
 				];
 			
 			console.trace(`lock_params = ${JSON.stringify(lock_params)}`);
@@ -68,7 +73,7 @@ module.exports = class EthereumNetwork extends Network{
 
 			let tx_data = lock_tx.encodeABI();
 
-			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address, data:tx_data, gas:est_gas}, this.prvkey);
+			let tx = await this.web3.eth.accounts.signTransaction({to:this.contract_address, data:tx_data, gas, gasLimit}, this.prvkey);
 			console.trace(`tx = ${JSON.stringify(tx)}`);
 
 			let receipt = await this.web3.eth.sendSignedTransaction(tx.rawTransaction);
@@ -103,7 +108,8 @@ module.exports = class EthereumNetwork extends Network{
 				params.ticket.origin_network,
 				params.ticket.nonce,
 				params.ticket.name,
-				params.ticket.ticker
+				params.ticket.ticker,
+				params.ticket.origin_decimals
 				];
 
 			console.silly(`claim_params = ${JSON.stringify(claim_params)}`);
@@ -248,9 +254,9 @@ module.exports = class EthereumNetwork extends Network{
 				return;
 			}
 
-			let topic = this.web3.utils.sha3("Lock(bytes,uint24,uint256,address,address)");
+			let topic = this.web3.utils.sha3("Lock(bytes,uint24,uint256,address,address,uint256)");
 
-			let params = this.web3.eth.abi.decodeParameters(['bytes', 'uint24', 'uint256', 'address', 'address'], log_entry.data);
+			let params = this.web3.eth.abi.decodeParameters(['bytes', 'uint24', 'uint256', 'address', 'address', 'uint256'], log_entry.data);
 
 			console.trace(`Extracted raw params ${JSON.stringify(params)}`);
 
@@ -260,9 +266,10 @@ module.exports = class EthereumNetwork extends Network{
 			let amount = params["2"];
 			let src_hash = params["3"]/*.slice(2)*/;
 			let src_address = params["4"]/*.slice(2)*/;
+			let nonce = Number(params["5"]);
 			let ticker = 'wra';
 
-			let lock_data = {dst_address, dst_network, amount, src_hash, src_address, ticker};
+			let lock_data = {dst_address, dst_network, amount, src_hash, src_address, nonce, ticker};
 			console.trace(`lock_data = ${JSON.stringify(lock_data)}`);
 
 			return lock_data;
@@ -332,8 +339,10 @@ module.exports = class EthereumNetwork extends Network{
 	}
 
 
-	async read_transfers(src_address, src_hash, src_network, dst_address){
-		console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
+	async read_transfers(params){
+		console.trace(`Extracting transfers for ${JSON.stringify(params)}`);
+
+		let {src_address, src_hash, src_network, dst_address, dst_network} = params;
 
 		try {
 		 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
@@ -342,23 +351,18 @@ module.exports = class EthereumNetwork extends Network{
 		 	params[0] = src_address;
 		 	params[1] = src_hash;
 		 	params[2] = Number(src_network);
-		 	params[3] = dst_address;
+		 	params[3] = '0x' + Buffer.from(dst_address).toString('hex');
+		 	params[4] = Number(dst_network);
 
 		 	console.debug(`get_transfer call params: ${JSON.stringify(params)}`);
 
-	 		let nonce = await contract.methods.get_transfer(...params).call();
+	 		let nonce = await contract.methods.getTransfer(...params).call();
 
-	 		if (nonce === 0){
-	 			return [];
-	 		} else {
-	 			return [{src_address, src_hash, src_network, dst_address, nonce}];
-	 		}
+	 		return Number(nonce);
 
-
-			return true;
 		} catch(e){
 			console.error(e);
-			return false;
+			return null;
 		}
 	}
 
@@ -368,10 +372,12 @@ module.exports = class EthereumNetwork extends Network{
  		let network_id = await contract.methods.network_id().call();
 
  		network_id = Number(network_id);
- 		let minted = [];
 
- 		if (hash){
-			let tmp = await contract.methods.minted(hash).call();
+ 		let minted = [];
+ 		if (hash){	 		
+ 			let storage = await new this.web3.eth.Contract(this.storage_abi, this.storage_address);
+
+			let tmp = await storage.methods.minted(hash).call();
 	 		console.trace(tmp);
 	 		if (tmp.origin_network != 0){
 	 			minted.push({wrapped_hash : hash, origin_hash : trim_0x(tmp.origin_hash), origin_network : tmp.origin_network});
@@ -397,7 +403,7 @@ module.exports = class EthereumNetwork extends Network{
 		console.trace(`signing ${JSON.stringify(ticket)}`);
 
 		try {
-			let {amount, dst_address, dst_network, name, nonce, origin_hash, origin_network, src_address, src_network, src_hash, ticker} = ticket;
+			let {amount, dst_address, dst_network, name, nonce, origin_hash, origin_network, src_address, src_network, src_hash, ticker, origin_decimals} = ticket;
 			let symbol = ticker;
 
 			let values = [
@@ -406,6 +412,7 @@ module.exports = class EthereumNetwork extends Network{
 				{value: dst_network, type: 'uint256'},
 				{value: name, type: 'string'},
 				{value: nonce, type: 'uint256'},
+				{value: origin_decimals, type: 'uint256'},
 				{value: origin_hash, type: 'string'},
 				{value: origin_network, type: 'uint256'},
 				{value: src_address, type: 'string'},
