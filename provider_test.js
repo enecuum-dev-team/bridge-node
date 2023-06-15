@@ -124,6 +124,7 @@ module.exports = class TestNetwork extends Network{
 				console.trace(`hash trimmed to ${hash}`);
 			}
 			let response = await http_get(`${this.url}/api/v1/token_info?hash=${hash}`);
+			console.silly(`response = ${JSON.stringify(response)}`);
 			if (response.err === 0){
 				let result = {};
 				result.decimals = response.result.decimals;
@@ -188,13 +189,13 @@ module.exports = class TestNetwork extends Network{
 				console.error(`err!==0`);
 				return null;
 			} else {
-				let {dst_address, dst_network, amount, src_hash, src_address} = response.result;
+				let {dst_address, dst_network, amount, src_hash, src_address, nonce} = response.result;
 				if (dst_address && dst_network && amount && src_hash && src_address) {
 					let tokens = await http_get(`${this.url}/api/v1/tokens`);
 					let ticker = tokens.filter((t) => {return t.hash === src_hash})[0].ticker;
 					console.trace(`tokens = ${JSON.stringify(tokens)}`);
 
-					return {dst_address, dst_network, amount, src_hash, src_address, ticker};
+					return {dst_address, dst_network, amount, src_hash, src_address, ticker, nonce};
 				} else {
 					console.error(`failed to parse ${JSON.stringify(response.result)}`);
 					return null;					
@@ -228,11 +229,14 @@ module.exports = class TestNetwork extends Network{
 		}
 	}
 
-	async read_transfers(src_address, src_hash, src_network, dst_address){
-		console.trace(`Extracting transfers for src_address=${src_address} & src_hash=${src_hash} & src_network=${src_network} & dst_address=${dst_address} at ${this.caption}`);
+	async read_transfers(params){
+		console.trace(`Extracting transfers for ${JSON.stringify(params)}`);
+
+		let {src_address, src_hash, src_network, dst_address, dst_network} = params;
 
 		try {
 			let url = `${this.url}/api/v1/transfers?src_address=${src_address}&src_hash=${src_hash}&src_network=${src_network}&dst_address=${dst_address}`;
+			console.silly(`url = ${url}`);
 			let response = await http_get(url);
 
 			if (response.err !== 0){

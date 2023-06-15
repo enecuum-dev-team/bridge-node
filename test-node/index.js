@@ -126,7 +126,7 @@ app.post('/api/v1/lock', async (req, res) => {
 	let result = undefined;
 
 	try {
-		let {dst_address, dst_network, amount, src_hash, src_address} = req.body;
+		let {dst_address, dst_network, amount, src_hash, src_address, nonce} = req.body;
 
 		let tx_hash = random_hash();
 
@@ -143,7 +143,7 @@ app.post('/api/v1/lock', async (req, res) => {
 					add_amount(src_address, src_hash, -1 * amount);
 					add_amount(SMART_ADDRESS, src_hash, amount);
 
-					transactions[tx_hash] = {dst_address, dst_network, amount, src_hash, src_address};
+					transactions[tx_hash] = {dst_address, dst_network, amount, src_hash, src_address, nonce};
 
 					console.info(`assets locked successfully`);
 				} else {

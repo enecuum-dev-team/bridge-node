@@ -17,10 +17,10 @@ console.fatal = function (...msg) {
   console.log(`\x1b[31m%s\x1b[0m`, ...msg);
   process.exit(1);
 };
-require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss', level: 'silly', extend:{fatal:0, debug:4, trace:5, silly:6}, include:['silly', 'trace','debug','info','warn','error','fatal']});
 
 const CONFIG_FILENAME = `config.json`;
 let config = {
+  loglevel: 'silly',
   tx_confirmation_delay_ms: 120000,
   validators : [{url:"http://localhost:8080/api/v1/notify"}],
   //validators : [{url:"http://95.216.207.173:80/api/v1/notify"}],
@@ -30,13 +30,15 @@ let config = {
   alice_pubkey: "1702",
 
   mexico: {"url" : "http://localhost:8023", "type" : "test", "caption" : "test_2"},
-  peso: "230001",
+  peso: "230003",
   jose_pubkey: "2301",
 
   germany: {"url" : "http://localhost:8029", "type" : "test", "caption" : "test_3"},
   mark: "290001",
   hans_pubkey: "2901"
 };
+
+require('console-stamp')(console, {datePrefix: '[', pattern:'yyyy.mm.dd HH:MM:ss', level: config.loglevel, extend:{fatal:0, debug:4, trace:5, silly:6}, include:['silly', 'trace','debug','info','warn','error','fatal']});
 
 console.info("Application started");
 
@@ -167,6 +169,25 @@ let balance_diff = function(old_balance, new_balance, exclude = []){
     return diff;
 }
 
+let save_known_token = function(tuple){
+  let content = "[]";
+  let fname = 'known_tokens.json';
+  try {
+    content = fs.readFileSync(fname, 'utf8');
+    console.trace(`${fname} loaded`);
+  } catch (e) {
+    console.info(`Failed to load ${fname} - ${JSON.stringify(e)}`);
+  }
+
+  try {
+    content = JSON.parse(content);
+    content.push(tuple);
+    fs.writeFileSync(fname, JSON.stringify(content, null, 4));
+  } catch (e) {
+    console.info(`Failed to update ${fname} - ${JSON.stringify(e)}`);
+  }
+}
+
 let simple_bridge = async function(src_network_obj, src_address, src_hash, amount, dst_network_obj, dst_address, org_network_obj){
     let src_provider = src_network_obj.provider;
     let dst_provider = dst_network_obj.provider;
@@ -180,8 +201,22 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     let old_sender = await src_provider.get_balance(src_address, src_hash);
     console.info(`old sender = ${JSON.stringify(old_sender)}`);
 
-    console.debug('Alice sending transaction...')
-    let lock_hash = await src_provider.send_lock({dst_address, dst_network, amount, src_hash, src_address});
+    console.debug('Checking outgoing nonce...');
+    let nonce = 0;
+    let transfer = await dst_provider.read_transfers({dst_address, dst_network, src_hash, src_address, src_network});
+    assert(transfer !== null, 'Failed to read nonce');
+    console.debug(`transfer = ${transfer}`);
+    if (transfer.length > 0){
+      nonce = transfer[0].nonce;
+    }
+    console.debug(`Nonce = ${nonce}`);
+
+    console.debug('Incrementing nonce...');
+    nonce = Number(nonce) + 1;
+    console.debug(`Nonce = ${nonce}`);
+
+    console.debug('Alice sending transaction...');
+    let lock_hash = await src_provider.send_lock({dst_address, dst_network, amount, src_hash, src_address, nonce});
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
     console.debug(`Waiting for approve of ${lock_hash}`);
@@ -282,8 +317,13 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
     assert(dst_token_info.ticker == expected_ticker, `Bad result ticker - ${dst_token_info.ticker}, ${expected_ticker} expected`);
     assert(dst_token_info.name == expected_name, `Bad result name - ${dst_token_info.name}, ${expected_name} expected`);
 
+    console.info(`Updating know_token list...`);
+    dst_provider.add_known_token(dst_hash);
+    save_known_token({contract_address: dst_provider.contract_address, hash: dst_hash});
+
     let bridge_result = {hash:dst_hash, decimals:dst_token_info.decimals, ticket: dst_token_info.ticker, name: dst_token_info.name};
     console.info(`Bridge successfull, bridge_result = ${JSON.stringify(bridge_result)}`);
+
 
     return bridge_result;
 }
@@ -304,7 +344,7 @@ let absolute = function(display, decimals){
   return BigInt(result);
 }
 
-describe('happy_case_1', function () {
+describe('happy_case', function () {
   this.timeout(0);
   this.slow(60*60*1000);
 
@@ -321,14 +361,21 @@ describe('happy_case_1', function () {
     POUND_DECIMALS = await get_decimals(ENGLAND, POUND);
     PESO_DECIMALS = await get_decimals(MEXICO, PESO);
     MARK_DECIMALS = await get_decimals(GERMANY, MARK);
+/*
+    console.info(`Minting new POUND at ${ENGLAND.provider.caption}...`);
+    POUND = await ENGLAND.provider.create_token({ticker: "EEE", name: "England", amount: 1000});
 
+    console.info(`Minting new PESO at ${MEXICO.provider.caption}...`);
+    PESO = await MEXICO.provider.create_token({ticker: "MMM", name: "Mexico", amount: 1000});
+
+    console.info(`Minting new MARK at ${GERMANY.provider.caption}...`);
+    MARK = await GERMANY.provider.create_token({ticker: "GGG", name: "Germany", amount: 1000});
+*/
     console.log('Update complete');
   });
 
-  it.skip(`debug`, async function(){
-    let msg = "hello";
-    console.fatal(msg);
-    console.info('hello');
+  it(`debug`, async function(){
+    let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
   });
 
   it('forward test', async function() {
@@ -368,7 +415,7 @@ describe('happy_case_1', function () {
     assert(PESO === bridge2.hash, "Reverse transfer must unlock, not mint");
   });
 
-  it.only('round logic test', async function () {
+  it('round logic test 1', async function () {
 
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
@@ -397,7 +444,40 @@ describe('happy_case_1', function () {
 
     return 0;
   });
-/*
+
+  it('round logic test 2', async function () {
+
+    console.log(`===== GERMANY TO MEXICO =========================================`);
+
+    let bridge1 = await simple_bridge(GERMANY, HANS_PUBKEY, MARK, absolute(8, MARK_DECIMALS), MEXICO, JOSE_PUBKEY, GERMANY);
+    let mexican_mark = bridge1;
+
+    console.log(`===== MEXICO TO ENGLAND =========================================`);
+
+    let bridge2 = await simple_bridge(MEXICO, JOSE_PUBKEY, mexican_mark.hash, absolute(4, mexican_mark.decimals), ENGLAND, ALICE_PUBKEY, GERMANY);
+    let english_mark = bridge2;
+
+    console.log(`===== GERMANY TO ENGLAND ========================================`);
+
+    let bridge3 = await simple_bridge(GERMANY, HANS_PUBKEY, MARK, absolute(4, MARK_DECIMALS), ENGLAND, ALICE_PUBKEY, GERMANY);
+    assert (bridge3.hash === english_mark.hash, "two-way transfers must merge tokens");
+
+    console.log(`===== ENGLAND TO GERMANY ========================================`);
+
+    let bridge4 = await simple_bridge(ENGLAND, ALICE_PUBKEY, english_mark.hash, absolute(4, english_mark.decimals), GERMANY, HANS_PUBKEY, GERMANY);
+    assert(MARK === bridge4.hash, "Circular transfer must unlock, not mint");
+
+    return 0;
+  });
+});
+
+describe('invalid data', function () {
+  this.timeout(0);
+  this.slow(60*60*1000);
+
+  before(async function(){
+  });
+
   it('unkonwn network test', async function () {
     console.log(`===== GERMANY TO MEXICO =========================================`);
 
@@ -419,7 +499,7 @@ describe('happy_case_1', function () {
     console.info(`old sender = ${JSON.stringify(old_sender)}`);
 
     console.debug('Alice sending transaction...')
-    let lock_hash = await src_provider.send_lock({dst_address, dst_network, amount, src_hash, src_address});
+    let lock_hash = await src_provider.send_lock({dst_address, dst_network: 666, amount, src_hash, src_address});
     assert(lock_hash !== null, 'Failed to send lock transaction');
 
     console.debug(`Waiting for approve of ${lock_hash}`);
@@ -429,5 +509,5 @@ describe('happy_case_1', function () {
     console.debug(`Reading lock data of ${lock_hash}`);
     let lock_data = await src_provider.read_lock(lock_hash);
     assert(lock_data === null, `Lock data must be null got ${lock_data} instead`);
-  });*/
+  });
 });
