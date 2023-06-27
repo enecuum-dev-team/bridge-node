@@ -292,13 +292,16 @@ let simple_bridge = async function(src_network_obj, src_address, src_hash, amoun
 
     let dst_decimals = dst_token_info.decimals;
     let src_decimals = src_token_info.decimals;
+    let org_decimals = org_token_info.decimals;
 
-    console.debug(`dst_amount = ${dst_amount}, src_amount = ${src_amount}, dst_decimals = ${dst_decimals}, src_decimals = ${src_decimals}`);
+    console.debug(`dst_amount = ${dst_amount}, src_amount = ${src_amount}, dst_decimals = ${dst_decimals}, src_decimals = ${src_decimals}, org_decimals = ${org_decimals}`);
 
-    if (src_decimals > dst_decimals){
-      assert(BigInt(dst_amount) * BigInt(10) ** BigInt(src_decimals - dst_decimals) === BigInt(src_amount));
+    let target_decimals = Math.min(org_decimals, dst_decimals);
+
+    if (src_decimals > target_decimals){
+      assert(BigInt(dst_amount) * BigInt(10) ** BigInt(src_decimals - target_decimals) === BigInt(src_amount));
     } else {
-      assert(BigInt(src_amount) * BigInt(10) ** BigInt(dst_decimals - src_decimals) === BigInt(dst_amount));
+      assert(BigInt(src_amount) * BigInt(10) ** BigInt(target_decimals - src_decimals) === BigInt(dst_amount));
     }
 
     let expected_ticker, expected_name;
@@ -378,7 +381,7 @@ describe('happy_case', function () {
     let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
   });
 
-  it('forward test', async function() {
+  it.only('forward test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
     let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);

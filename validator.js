@@ -296,11 +296,13 @@ module.exports = class Node {
 				dst_decimals = decimals[dst_network.network_id];
 			}
 
-			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
-			if (src_decimals && dst_decimals){
-				if (dst_decimals < src_decimals){
+			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}, origin_decimals = ${origin_decimals}`);
+			if (src_decimals && dst_decimals && origin_decimals){
+				let target_decimals = Math.min(dst_decimals, origin_decimals);
+
+				if (target_decimals < src_decimals){
 					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
-				} else if (src_decimals < dst_decimals){
+				} else if (src_decimals < target_decimals){
 					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
 				} else {
 					ticket.amount = BigInt(lock.amount);
