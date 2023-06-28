@@ -123,7 +123,9 @@ module.exports = class EthereumNetwork extends Network{
 
 			let est_gas = 3000000;
 
-			let nonce = await this.web3.eth.getTransactionCount(`0xf784C9bca8BbDD93A195aeCdBa23472f89B1E7d6`, 'pending');
+			let nonce = await this.web3.eth.getTransactionCount(this.pubkey, 'pending');
+			//const nonce =
+			//	'0x' + ((await this.web3.eth.getTransactionCount("0xf784C9bca8BbDD93A195aeCdBa23472f89B1E7d6")) + 1).toString(16)
 			console.trace(`nonce = ${nonce}`);
 
 			let gas_price = await this.web3.eth.getGasPrice();
@@ -351,14 +353,15 @@ module.exports = class EthereumNetwork extends Network{
 		 	params[0] = src_address;
 		 	params[1] = src_hash;
 		 	params[2] = Number(src_network);
-		 	params[3] = '0x' + Buffer.from(dst_address).toString('hex');
+		 	//params[3] = '0x' + Buffer.from(dst_address).toString('hex');
+			params[3] = dst_address.substring(2).toLowerCase();
 		 	params[4] = Number(dst_network);
 
 		 	console.debug(`get_transfer call params: ${JSON.stringify(params)}`);
 
 	 		let nonce = await contract.methods.getTransfer(...params).call();
 
-	 		return Number(nonce);
+	 		return [{nonce:Number(nonce)}];
 
 		} catch(e){
 			console.error(e);
@@ -412,7 +415,7 @@ module.exports = class EthereumNetwork extends Network{
 				{value: dst_network, type: 'uint256'},
 				{value: name, type: 'string'},
 				{value: nonce, type: 'uint256'},
-				{value: origin_decimals, type: 'uint256'},
+				{value: origin_decimals, type: 'uint8'},
 				{value: origin_hash, type: 'string'},
 				{value: origin_network, type: 'uint256'},
 				{value: src_address, type: 'string'},

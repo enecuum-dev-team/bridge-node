@@ -301,9 +301,9 @@ module.exports = class Node {
 				let target_decimals = Math.min(dst_decimals, origin_decimals);
 
 				if (target_decimals < src_decimals){
-					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
+					ticket.amount = BigInt(lock.amount.toString().slice(0, (target_decimals - src_decimals)));
 				} else if (src_decimals < target_decimals){
-					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
+					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(target_decimals - src_decimals));
 				} else {
 					ticket.amount = BigInt(lock.amount);
 				}
