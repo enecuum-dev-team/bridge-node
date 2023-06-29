@@ -97,6 +97,7 @@ module.exports = class Node {
 				let {hash, src_network_id, dst_network_id} = req.query;
 
 				let dst_decimals;
+				let org_decimals;
 	
 				// choose source network
 				let src_network = config.networks.filter((network) => {return network.network_id === Number(src_network_id)})[0];
@@ -117,34 +118,38 @@ module.exports = class Node {
 				console.debug(`minted_data = ${JSON.stringify(minted_data)}`);
 
 				if (minted_data){
-					console.info(`Source token is minted, checking direction ${minted_data.origin_network} and ${dst_network_id}`)
-					if (minted_data.origin_network == dst_network_id){
-						console.info(`Token is returning to origin network, reading original token decimals`)
-
-						let dst_network = config.networks.filter((network) => {return Number(network.network_id) === Number(dst_network_id)})[0];
-
-						if (dst_network === undefined){
-							console.error(`Failed to select destination network - ${lock.dst_network}`);
-							res.send({err:1});
-							return;
-						}
-
-						console.info(`Checking token info for ${minted_data.origin_hash} at origin ${dst_network_id}...`);
-						let origin_token_info = await dst_network.provider.get_token_info(minted_data.origin_hash);
-						if (!origin_token_info){
-							console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
-							throw(`failed to read token info from selected network`);
-						}
-						console.info(`Token info for ${minted_data.origin_hash} = ${JSON.stringify(origin_token_info)}`);
-
-						dst_decimals = origin_token_info.decimals;
-					} else {
-						dst_decimals = decimals[dst_network.network_id];
+					// choose origin network
+					let origin_network_id = Number(minted_data.origin_network);
+					let org_network = config.networks.filter((network) => {return network.network_id === origin_network_id})[0];
+					if (org_network === undefined){
+						console.error(`Failed to select source network - wrong origin_network_id ${origin_network_id}`);
+						throw(`failed to select network`);
 					}
+
+					// reading origin token info
+					console.info(`Checking token info for ${minted_data.origin_hash} at origin ${org_network.caption}...`);
+					let origin_token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
+					if (!origin_token_info){
+						console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
+						throw(`failed to read token info from selected network`);
+					}
+
+					org_decimals = org_token_info.decimals;
+					console.debug(`minted_data specified, org_decimals = ${org_decimals}`);
 				} else {
-					dst_decimals = decimals[dst_network_id];
+					console.info(`Checking token info for ${hash} at origin ${src_network.caption}...`);
+					let src_token_info = await src_network.provider.get_token_info(hash);
+					if (!src_token_info){
+						console.error(`Failed to read token_info for ${hash}`);
+						throw(`failed to read token info from selected network`);
+					}
+					org_decimals = src_token_info.decimals;
+					console.debug(`minted_data not specified, org_decimals = ${org_decimals}`);
 				}
-				response = {result:{dst_decimals}, err:0}
+
+				let result_decimals = Math.min(org_decimals, decimals[dst_network_id]);
+
+				response = {result:{result_decimals}, err:0}
 			} catch(e){
 				console.error(e);
 				response = {err:1};
@@ -296,12 +301,14 @@ module.exports = class Node {
 				dst_decimals = decimals[dst_network.network_id];
 			}
 
-			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}`);
-			if (src_decimals && dst_decimals){
-				if (dst_decimals < src_decimals){
-					ticket.amount = BigInt(lock.amount.toString().slice(0, (dst_decimals - src_decimals)));
-				} else if (src_decimals < dst_decimals){
-					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(dst_decimals - src_decimals));
+			console.trace(`Calculating amount for src_decimals = ${src_decimals}, dst_decimals = ${dst_decimals}, origin_decimals = ${origin_decimals}`);
+			if (src_decimals && dst_decimals && origin_decimals){
+				let target_decimals = Math.min(dst_decimals, origin_decimals);
+
+				if (target_decimals < src_decimals){
+					ticket.amount = BigInt(lock.amount.toString().slice(0, (target_decimals - src_decimals)));
+				} else if (src_decimals < target_decimals){
+					ticket.amount = BigInt(lock.amount) * (BigInt(10) ** BigInt(target_decimals - src_decimals));
 				} else {
 					ticket.amount = BigInt(lock.amount);
 				}
