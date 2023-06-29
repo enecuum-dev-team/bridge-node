@@ -149,7 +149,7 @@ module.exports = class Node {
 
 				let result_decimals = Math.min(org_decimals, decimals[dst_network_id]);
 
-				response = {result:{result_decimals}, err:0}
+				response = {result:{dst_decimals: result_decimals}, err:0}
 			} catch(e){
 				console.error(e);
 				response = {err:1};
