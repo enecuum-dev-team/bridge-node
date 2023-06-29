@@ -1,5 +1,5 @@
 let rsasign = require("jsrsasign");
-let ContractParser = require("../NODE/node-dev/contractParser.js").ContractParser;
+let ContractParser = require("../node-dev/contractParser.js").ContractParser;
 //let Utils = require("../node-dev/Utils.js")
 let Network = require("./provider_abstract.js");
 let http = require("http");
