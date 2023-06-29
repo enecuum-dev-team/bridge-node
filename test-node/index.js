@@ -78,9 +78,8 @@ let random_hash = function(){
 	return crypto.randomBytes(Math.ceil(64/2)).toString('hex').slice(0,64);
 }
 
-let create_token = function(ticker, name){
+let create_token = function(ticker, name, decimals){
 	let hash = random_hash();
-	let decimals = state.decimals;
 	state.tokens.push({hash, ticker, decimals, name});
 	return hash;
 }
@@ -167,7 +166,7 @@ app.post('/api/v1/claim', async (req, res) => {
 	let result = undefined;
 	
 	try {
-		let {dst_address, dst_network, amount, src_hash, src_address, ticker, src_network, origin_hash, origin_network, nonce, name} = req.body.ticket;
+		let {dst_address, dst_network, amount, src_hash, src_address, ticker, src_network, origin_hash, origin_network, nonce, name, origin_decimals} = req.body.ticket;
 
 		let tx_hash = random_hash();
 
@@ -198,8 +197,9 @@ app.post('/api/v1/claim', async (req, res) => {
 						add_amount(dst_address, wrapped_hash, amount);
 					} else {
 						console.debug(`Creating new wrapper`);
-						minted_hash = create_token(ticker, name);
-						minted.push({wrapped_hash:minted_hash, origin_hash, origin_network});
+						let decimals = Math.min(state.decimals, origin_decimals);
+						minted_hash = create_token(ticker, name, decimals);
+						minted.push({wrapped_hash:minted_hash, origin_hash, origin_network, decimals, origin_decimals});
 
 						transactions[tx_hash] = {dst_hash:minted_hash};
 						add_amount(dst_address, minted_hash, amount);
