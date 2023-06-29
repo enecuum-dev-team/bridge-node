@@ -4,14 +4,14 @@
         "url": "http://95.216.246.116",
         "type": "enecuum",
         "caption": "BIT",
-        "pubkey": "02b227742759f854f012077216e205dc49b046ba65f5f4722d6a5d782ce5746d9c",
-        "prvkey": "8931682138f06e91c49b835acb199f177f7f902f0f5b8b034579f61653cbf441",
+        "pubkey": "03c779767d6715be1759c718b39d9f1d0baf415f8a6417841d5a4acdb074658566",
+        "prvkey": "147961cc57990e00e095c44a0dcebb8626666a04485fb758c77f7c801051b1c5",
         "ticker": "0000000000000000000000000000000000000000000000000000000000000001",
         "genesis_pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d",
         "tx_fee": 1000000000
     },
-    "pound": "fa90c6bb75b21978bc437375f0f9e551e6db0d3f28585f1d67233dd101cb38c1",
-    "alice_pubkey": "02b227742759f854f012077216e205dc49b046ba65f5f4722d6a5d782ce5746d9c",
+    "pound": "0900cd810cdd8460b348a329b88a3187c9bf328493f9f06ab960f63bb605b27f",
+    "alice_pubkey": "03c779767d6715be1759c718b39d9f1d0baf415f8a6417841d5a4acdb074658566",
     "mexico": {
         "url": "http://localhost:8023",
         "type": "test",

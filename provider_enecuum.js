@@ -1,5 +1,5 @@
 let rsasign = require("jsrsasign");
-let ContractParser = require("../node-dev/contractParser.js").ContractParser;
+let ContractParser = require("../NODE/node-dev/contractParser.js").ContractParser;
 //let Utils = require("../node-dev/Utils.js")
 let Network = require("./provider_abstract.js");
 let http = require("http");
@@ -494,7 +494,7 @@ module.exports = class EnecuumNetwork extends Network {
 
         try {
             network_id = await this.get_network_id();
-        } catch(e){
+        } catch(e) {
             console.error(e);
         }
 
@@ -511,19 +511,17 @@ module.exports = class EnecuumNetwork extends Network {
     async read_transfers (params) {
         console.trace(`Extracting transfers for ${JSON.stringify(params)} at ${this.caption}`);
 
-        let {src_address, src_hash, dst_network, dst_address} = params;
+        let {src_address, src_hash, dst_network, dst_address, src_network} = params;
 
         try {
-            //let url = `${this.url}/api/v1/bridge_last_transfer?dst_address=${dst_address}&src_address=${src_address}&src_network=${src_network}&src_hash=${src_hash}`;
-            let url = `${this.url}/api/v1/bridge_last_lock_transfer?dst_address=${dst_address}&src_address=${src_address}&dst_network=${dst_network}&src_hash=${src_hash}`;
+            let url = `${this.url}/api/v1/bridge_last_transfer?dst_address=${dst_address}&src_address=${src_address}&src_network=${src_network}&src_hash=${src_hash}`;
+            // let url = `${this.url}/api/v1/bridge_last_lock_transfer?dst_address=${dst_address}&src_address=${src_address}&dst_network=${dst_network}&src_hash=${src_hash}`;
             console.trace(`url = ${url}`);
             let response = await http_get(url);
 
             console.trace(`response = '${response}'`);
 
-            let nonce = Number(response);
-
-            return nonce;
+            return JSON.parse(response);
         } catch(e){
             console.warn(e);
             return null;
