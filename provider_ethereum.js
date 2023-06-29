@@ -1,7 +1,10 @@
 let Network = require('./provider_abstract.js');
 let Web3 = require('web3');
 
-let erc20_abi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+const erc20_abi = require('./abis/erc20.json');
+const spaceBridge_abi = require('./abis/SpaceBridge.json');
+const spaceStorage_abi = require('./abis/SpaceStorage.json');
+const spaceVault_abi = require('./abis/SpaceVault.json');
 
 //BigInt.prototype.toJSON = function() { return this.toString() };
 
@@ -15,9 +18,6 @@ module.exports = class EthereumNetwork extends Network{
 	constructor(network_config){
 		super(network_config);
 		this.type = "ethereum";
-
-		this.abi = network_config.abi;
-		this.storage_abi = network_config.storage_abi;
 
 		this.contract_address = network_config.contract_address;
 		this.vault_address = network_config.vault_address;
@@ -58,7 +58,7 @@ module.exports = class EthereumNetwork extends Network{
 				console.trace(`allowance_hash = ${receipt.transactionHash}`);			
 			}
 
-			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
+			let bridge_contract = await new this.web3.eth.Contract(spaceBridge_abi, this.contract_address);
 			let lock_params = [
 					this.web3.utils.asciiToHex(dst_address),
 					dst_network,
@@ -90,7 +90,7 @@ module.exports = class EthereumNetwork extends Network{
 		console.trace(`Sending claim with params ${JSON.stringify(params)} at ${this.caption}`);
 
 		try {
-			let bridge_contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
+			let bridge_contract = await new this.web3.eth.Contract(spaceBridge_abi, this.contract_address);
 
 			if (params.ticket.origin_hash.startsWith('0x')){
 				params.ticket.origin_hash = params.ticket.origin_hash.slice(2);
@@ -347,7 +347,7 @@ module.exports = class EthereumNetwork extends Network{
 		let {src_address, src_hash, src_network, dst_address, dst_network} = params;
 
 		try {
-		 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
+		 	let contract = await new this.web3.eth.Contract(spaceBridge_abi, this.contract_address);
 
 		 	let params = [];
 		 	params[0] = src_address;
@@ -371,14 +371,14 @@ module.exports = class EthereumNetwork extends Network{
 
 	async read_state(hash){
 		console.trace(`Reading state of contract ${this.contract_address} for (${hash})at ${this.caption}`);
-	 	let contract = await new this.web3.eth.Contract(this.abi, this.contract_address);
+	 	let contract = await new this.web3.eth.Contract(spaceBridge_abi, this.contract_address);
  		let network_id = await contract.methods.network_id().call();
 
  		network_id = Number(network_id);
 
  		let minted = [];
  		if (hash){	 		
- 			let storage = await new this.web3.eth.Contract(this.storage_abi, this.storage_address);
+ 			let storage = await new this.web3.eth.Contract(spaceStorage_abi, this.storage_address);
 
 			let tmp = await storage.methods.minted(hash).call();
 	 		console.trace(tmp);

@@ -1,0 +1,31 @@
+{
+    "england": {
+        "url": "https://polygon-mumbai.g.alchemy.com/v2/SP9MTpdm42r81fZ_p4V8wf62Lg14Y4HD",
+        "type": "ethereum",
+        "contract_address": "0x9E7c6500244D2AF33B40Ae9df386f2Df8b188348",
+        "vault_address": "0x745aA87F9e0cf367B3F603600aaE90E785b11993",
+        "caption": "MUMBAI",
+        "known_tokens": [
+            "0x2e569eAFF53071a87cCc5323a16Eb443Fc421c4e"
+        ],
+        "pubkey": "0x78B77d5d7A1DFd9a2DA3EE91AFbc205B7eDD1D4d",
+        "prvkey": "1ce53429cc1c51183d2e09a94ad2d46af7491ed0705d208f706c1faf075941c8",
+        "storage_address": "0x7dF4A1d371b564401470B712422f2A68c3312371"
+    },
+    "pound": "0x2e569eAFF53071a87cCc5323a16Eb443Fc421c4e",
+    "alice_pubkey": "0x78B77d5d7A1DFd9a2DA3EE91AFbc205B7eDD1D4d",
+    "mexico": {
+        "url": "http://localhost:8023",
+        "type": "test",
+        "caption": "test_2"
+    },
+    "peso": "tkn19",
+    "jose_pubkey": "jose19",
+    "germany": {
+        "url": "http://localhost:8029",
+        "type": "test",
+        "caption": "test_3"
+    },
+    "mark": "tkn019",
+    "hans_pubkey": "user19"
+}
