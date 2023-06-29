@@ -381,7 +381,7 @@ describe('happy_case', function () {
 //     let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
 //   });
 
-  it.only('forward test', async function() {
+  it('forward test', async function() {
     console.log(`===== ENGLAND TO MEXICO =========================================`);
 
     let bridge1 = await simple_bridge(ENGLAND, ALICE_PUBKEY, POUND, absolute(3, POUND_DECIMALS), MEXICO, JOSE_PUBKEY, ENGLAND);
