@@ -269,9 +269,9 @@ module.exports = class EthereumNetwork extends Network{
 			let src_hash = params["3"]/*.slice(2)*/;
 			let src_address = params["4"]/*.slice(2)*/;
 			let nonce = Number(params["5"]);
-			let ticker = 'wra';
+			//let ticker = 'wra';
 
-			let lock_data = {dst_address, dst_network, amount, src_hash, src_address, nonce, ticker};
+			let lock_data = {dst_address, dst_network, amount, src_hash, src_address, nonce/*, ticker*/};
 			console.trace(`lock_data = ${JSON.stringify(lock_data)}`);
 
 			return lock_data;
