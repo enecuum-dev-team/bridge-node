@@ -128,8 +128,8 @@ module.exports = class Node {
 
 					// reading origin token info
 					console.info(`Checking token info for ${minted_data.origin_hash} at origin ${org_network.caption}...`);
-					let origin_token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
-					if (!origin_token_info){
+					let org_token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
+					if (!org_token_info){
 						console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
 						throw(`failed to read token info from selected network`);
 					}
