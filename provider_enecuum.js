@@ -160,6 +160,8 @@ module.exports = class EnecuumNetwork extends Network {
         let data = parser.dataFromObject({type, parameters:{compressed_data}});
         //let data = parser.dataFromObject({type, parameters});
 
+        console.log(type, data)
+
         let tx = {
             amount : this.tx_fee,
             from : this.pubkey,
@@ -208,7 +210,7 @@ module.exports = class EnecuumNetwork extends Network {
 
         try {
             console.trace(`args = ${JSON.stringify(args)}`);
-            return await this.send_tx("lock", args, model);
+            return await this.send_tx("bridge_lock", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -346,8 +348,8 @@ module.exports = class EnecuumNetwork extends Network {
 
         try {
             let compressed_data = this.encode_init_data(params);
-            //return await this.send_tx("claim_init", {compressed_data}, ["compressed_data"]);
-            return await this.send_tx("claim_init", args, model);
+            //return await this.send_tx("bridge_claim_init", {compressed_data}, ["compressed_data"]);
+            return await this.send_tx("bridge_claim_init", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -369,7 +371,7 @@ module.exports = class EnecuumNetwork extends Network {
         args.transfer_id = params.transfer_id;
 
         try {
-            return await this.send_tx("claim_confirm", args, model);
+            return await this.send_tx("bridge_claim_confirm", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -465,7 +467,7 @@ module.exports = class EnecuumNetwork extends Network {
             decompressed = JSON.parse(decompressed);
 
 
-            if (params.type === 'lock'){
+            if (params.type === 'bridge_lock'){
                 let dst_address = decompressed.dst_address;
                 let dst_network = decompressed.dst_network;
                 let amount = decompressed.amount;

@@ -1,7 +1,7 @@
 const request = require('request');
 const crypto = require('crypto');
 const rsasign = require('jsrsasign');
-let ContractParser = require("../node-dev/contractParser.js").ContractParser;
+let ContractParser = require("../NODE/node-dev/contractParser.js").ContractParser;
 
 let parser_config = {
 	contract_pricelist : {
@@ -38,12 +38,12 @@ let parser_config = {
 let bit_config = {
     url : "95.216.246.116",
     rich : {
-            "prvkey": "...",
-            "pubkey": "..."
+        "prvkey": "9d3ce1f3ec99c26c2e64e06d775a52578b00982bf1748e2e2972f7373644ac5c",
+        "pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d"
     },
     bob : {
-            "prvkey": "...",
-            "pubkey": "..."
+        "prvkey": "8931682138f06e91c49b835acb199f177f7f902f0f5b8b034579f61653cbf441",
+        "pubkey": "02b227742759f854f012077216e205dc49b046ba65f5f4722d6a5d782ce5746d9c"
     },
     ticker : "0000000000000000000000000000000000000000000000000000000000000001",
     genesis : {
@@ -188,6 +188,7 @@ let enq_create_token = async function(){
 
 	let response = await send_tx(init_data);
 	//console.log(`https://bit.enecuum.com/#!/token/${hash}`);
+    console.log(response)
 	return response.result[0].hash;
 }
 

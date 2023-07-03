@@ -4,7 +4,7 @@
       "name": "england",
       "script": "test-node/index.js",
       "watch": true,
-      "ignore_watch": ["log", ".idea"],
+      "ignore_watch": ["log", ".idea", "known_tokens.json"],
       "args": "--port 8017 --network_id 17 --state_filename test-node/england.json",
       "merge_logs": true,
       "log_file" : "log/england.log"
@@ -12,7 +12,7 @@
       "name": "mexico",
       "script": "test-node/index.js",
       "watch": true,
-      "ignore_watch": ["log", ".idea"],
+      "ignore_watch": ["log", ".idea", "known_tokens.json"],
       "args": "--port 8023 --network_id 23 --state_filename test-node/mexico.json",
       "merge_logs": true,
       "log_file" : "log/mexico.log"
@@ -20,7 +20,7 @@
       "name": "germany",
       "script": "test-node/index.js",
       "watch": true,
-      "ignore_watch": ["log", ".idea"],
+      "ignore_watch": ["log", ".idea", "known_tokens.json"],
       "args": "--port 8029 --network_id 29 --state_filename test-node/germany.json",
       "merge_logs": true,
       "log_file" : "log/germany.log"
@@ -28,10 +28,9 @@
       "name": "validator",
       "script": "index.js",
       "watch": true,
-      "ignore_watch": ["log", ".idea"],
+      "ignore_watch": ["log", ".idea", "known_tokens.json"],
       "args": "--config config.json --port 8080",
       "merge_logs": true,
       "log_file" : "log/validator.log"
     }]
 }
-  

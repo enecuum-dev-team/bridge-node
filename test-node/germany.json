@@ -1,14 +1,14 @@
 {
 	"decimals": 4,
 	"tokens": [{
-		"hash": "290001",
+		"hash": "290006",
 		"ticker": "MRK",
 		"name": "Mark",
 		"decimals": 4
 	}],
 	"ledger": {
 		"2901":{
-			"290001":1000000
+			"290006":1000000
 		}
 	},
 	"known_networks":[
