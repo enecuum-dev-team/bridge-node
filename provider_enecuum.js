@@ -228,7 +228,7 @@ module.exports = class EnecuumNetwork extends Network {
             "origin_hash",
             "origin_network",
             "nonce",
-            "transfer_id",
+            "ticket_hash",
             "ticker",
             "origin_decimals",
             "name",
@@ -241,7 +241,7 @@ module.exports = class EnecuumNetwork extends Network {
         args = Object.assign(args, params.ticket);
 
         args.amount = args.amount.toString();
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
         args.dst_network = Number(args.dst_network);
 
         let parameters = args;
@@ -261,7 +261,7 @@ module.exports = class EnecuumNetwork extends Network {
         const model = [
             "validator_id",
             "validator_sign",
-            "transfer_id",
+            "ticket_hash",
         ];
 
         let type = "claim_confirm";
@@ -270,7 +270,7 @@ module.exports = class EnecuumNetwork extends Network {
 
         args.validator_id = params.validator_id;
         args.validator_sign = params.validator_sign;
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
 
         let parameters = args;
 
@@ -330,7 +330,7 @@ module.exports = class EnecuumNetwork extends Network {
             "origin_hash",
             "origin_network",
             "nonce",
-            "transfer_id",
+            "ticket_hash",
             "ticker",
             "origin_decimals",
             "name"
@@ -341,7 +341,7 @@ module.exports = class EnecuumNetwork extends Network {
         args = Object.assign(args, params.ticket);
 
         args.amount = args.amount.toString();
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
         args.dst_network = Number(args.dst_network);
 
         console.trace(`args = ${JSON.stringify(args)}`);
@@ -361,14 +361,14 @@ module.exports = class EnecuumNetwork extends Network {
         const model = [
             "validator_id",
             "validator_sign",
-            "transfer_id",
+            "ticket_hash",
         ];
 
         let args = {};
 
         args.validator_id = params.validator_id;
         args.validator_sign = params.validator_sign;
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
 
         try {
             return await this.send_tx("bridge_claim_confirm", args, model);
