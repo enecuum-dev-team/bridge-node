@@ -6,14 +6,14 @@ let EthereumNetwork = require('./provider_ethereum.js');
 let EnecuumNetwork = require('./provider_enecuum.js');
 let TestNetwork = require('./provider_test.js');
 
-let calculate_transfer_id = function(ticket){
+let calculate_ticket_hash = function(ticket){
 	let param_names = ["dst_address", "dst_network", "amount", "src_hash", "src_address", "src_network", "origin_hash", "origin_network", "nonce", "ticker", "origin_decimals", "name"];
 
 	let params_str = param_names.map(v => crypto.createHash('sha256').update(ticket[v].toString().toLowerCase()).digest('hex')).join("");
 
-	let transfer_id = crypto.createHash('sha256').update(params_str).digest('hex');
+	let ticket_hash = crypto.createHash('sha256').update(params_str).digest('hex');
 
-	return transfer_id;
+	return ticket_hash;
 }
 
 let trim_0x = function(str){
@@ -128,8 +128,8 @@ module.exports = class Node {
 
 					// reading origin token info
 					console.info(`Checking token info for ${minted_data.origin_hash} at origin ${org_network.caption}...`);
-					let origin_token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
-					if (!origin_token_info){
+					let org_token_info = await org_network.provider.get_token_info(minted_data.origin_hash);
+					if (!org_token_info){
 						console.error(`Failed to read token_info for ${minted_data.origin_hash}`);
 						throw(`failed to read token info from selected network`);
 					}
@@ -343,16 +343,16 @@ module.exports = class Node {
 			confirmation.validator_id = dst_network.pubkey;
 
 			try {
-				confirmation.transfer_id = calculate_transfer_id(ticket);
+				confirmation.ticket_hash = calculate_ticket_hash(ticket);
 			} catch(e){
-				console.error(`failed to calculate_transfer_id for ${JSON.stringify(ticket)}`);
+				console.error(`failed to calculate_ticket_hash for ${JSON.stringify(ticket)}`);
 				console.error(e);
 				res.send({});
 			}
 
 			//TODO: workaround
 			if(dst_network.provider.type === "enecuum"){
-				confirmation.validator_sign = dst_network.provider.sign(confirmation.transfer_id);
+				confirmation.validator_sign = dst_network.provider.sign(confirmation.ticket_hash);
 			} else {
 				confirmation.validator_sign = dst_network.provider.sign(ticket);
 			}

@@ -160,6 +160,8 @@ module.exports = class EnecuumNetwork extends Network {
         let data = parser.dataFromObject({type, parameters:{compressed_data}});
         //let data = parser.dataFromObject({type, parameters});
 
+        console.log(type, data)
+
         let tx = {
             amount : this.tx_fee,
             from : this.pubkey,
@@ -208,7 +210,7 @@ module.exports = class EnecuumNetwork extends Network {
 
         try {
             console.trace(`args = ${JSON.stringify(args)}`);
-            return await this.send_tx("lock", args, model);
+            return await this.send_tx("bridge_lock", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -226,7 +228,7 @@ module.exports = class EnecuumNetwork extends Network {
             "origin_hash",
             "origin_network",
             "nonce",
-            "transfer_id",
+            "ticket_hash",
             "ticker",
             "origin_decimals",
             "name",
@@ -239,7 +241,7 @@ module.exports = class EnecuumNetwork extends Network {
         args = Object.assign(args, params.ticket);
 
         args.amount = args.amount.toString();
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
         args.dst_network = Number(args.dst_network);
 
         let parameters = args;
@@ -259,7 +261,7 @@ module.exports = class EnecuumNetwork extends Network {
         const model = [
             "validator_id",
             "validator_sign",
-            "transfer_id",
+            "ticket_hash",
         ];
 
         let type = "claim_confirm";
@@ -268,7 +270,7 @@ module.exports = class EnecuumNetwork extends Network {
 
         args.validator_id = params.validator_id;
         args.validator_sign = params.validator_sign;
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
 
         let parameters = args;
 
@@ -328,7 +330,7 @@ module.exports = class EnecuumNetwork extends Network {
             "origin_hash",
             "origin_network",
             "nonce",
-            "transfer_id",
+            "ticket_hash",
             "ticker",
             "origin_decimals",
             "name"
@@ -339,15 +341,15 @@ module.exports = class EnecuumNetwork extends Network {
         args = Object.assign(args, params.ticket);
 
         args.amount = args.amount.toString();
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
         args.dst_network = Number(args.dst_network);
 
         console.trace(`args = ${JSON.stringify(args)}`);
 
         try {
             let compressed_data = this.encode_init_data(params);
-            //return await this.send_tx("claim_init", {compressed_data}, ["compressed_data"]);
-            return await this.send_tx("claim_init", args, model);
+            //return await this.send_tx("bridge_claim_init", {compressed_data}, ["compressed_data"]);
+            return await this.send_tx("bridge_claim_init", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -359,17 +361,17 @@ module.exports = class EnecuumNetwork extends Network {
         const model = [
             "validator_id",
             "validator_sign",
-            "transfer_id",
+            "ticket_hash",
         ];
 
         let args = {};
 
         args.validator_id = params.validator_id;
         args.validator_sign = params.validator_sign;
-        args.transfer_id = params.transfer_id;
+        args.ticket_hash = params.ticket_hash;
 
         try {
-            return await this.send_tx("claim_confirm", args, model);
+            return await this.send_tx("bridge_claim_confirm", args, model);
         } catch(e){
             console.error(e);
             return null;
@@ -465,7 +467,7 @@ module.exports = class EnecuumNetwork extends Network {
             decompressed = JSON.parse(decompressed);
 
 
-            if (params.type === 'lock'){
+            if (params.type === 'bridge_lock'){
                 let dst_address = decompressed.dst_address;
                 let dst_network = decompressed.dst_network;
                 let amount = decompressed.amount;

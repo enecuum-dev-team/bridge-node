@@ -10,20 +10,20 @@
         "genesis_pubkey": "029dd222eeddd5c3340e8d46ae0a22e2c8e301bfee4903bcf8c899766c8ceb3a7d",
         "tx_fee": 1000000000
     },
-    "pound": "0900cd810cdd8460b348a329b88a3187c9bf328493f9f06ab960f63bb605b27f",
+    "pound": "6caf39e79709005bddbc1754bd1497975ee79917c130d99566e3f70c4f3b8c24",
     "alice_pubkey": "03c779767d6715be1759c718b39d9f1d0baf415f8a6417841d5a4acdb074658566",
     "mexico": {
         "url": "http://localhost:8023",
         "type": "test",
         "caption": "test_2"
     },
-    "peso": "230003",
+    "peso": "230008",
     "jose_pubkey": "2301",
     "germany": {
         "url": "http://localhost:8029",
         "type": "test",
         "caption": "test_3"
     },
-    "mark": "290001",
+    "mark": "290006",
     "hans_pubkey": "2901"
 }
