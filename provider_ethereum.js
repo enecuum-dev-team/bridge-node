@@ -392,7 +392,7 @@ module.exports = class EthereumNetwork extends Network{
 
 	create_ticker_from(origin_ticker){
 		console.trace(`Creating new ethereum ticker from string ${origin_ticker}`);
-		let result = 'SB' + origin_ticker;
+		let result = /*'SB' + */origin_ticker;
 		return result;
 	}
 

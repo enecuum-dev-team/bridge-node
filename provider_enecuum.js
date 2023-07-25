@@ -632,7 +632,7 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Creating new enecuum ticker from string ${origin_ticker}`);
 
         origin_ticker = origin_ticker.replace(/[^a-z]/gi, '');
-        let result = 'SB' + origin_ticker.substring(0, 4);
+        let result = /*'SB' + */origin_ticker.substring(0, 6);
         return result;
     }
 
@@ -640,7 +640,6 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Creating new enecuum name from string ${origin_name}`);
         origin_name = origin_name.replace(/[^a-z]/gi, '');
         let result = origin_name.substring(0, 20);
-        //let result = "wrapped token";
         return result;
     }
 
