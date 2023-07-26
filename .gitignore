@@ -3,3 +3,5 @@ package-lock.json
 .eslintrc.js
 keys.json
 log/*
+config.json
+eco.json

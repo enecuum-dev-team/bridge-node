@@ -81,16 +81,16 @@ let http_post = function (url, json) {
 
 let config = {
     contract_pricelist: {
-        "create_token" :    20000000000,
-        "create_pos" :      0,
-        "delegate" :        0,
-        "undelegate" :      0,
-        "transfer" :        0,
-        "pos_reward" :      0,
-        "mint" :            0,
-        "burn" :            0,
-        "custom" :          20000000000,
-        "pool_create" :     0,
+        "create_token" :            20000000000,
+        "create_pos" :              0,
+        "delegate" :                0,
+        "undelegate" :              0,
+        "transfer" :                0,
+        "pos_reward" :              0,
+        "mint" :                    0,
+        "burn" :                    0,
+        "custom" :                  20000000000,
+        "pool_create" :             0,
         "pool_add_liquidity" :      0,
         "pool_remove_liquidity" :   0,
         "pool_sell_exact" :         0,
@@ -104,10 +104,15 @@ let config = {
         "pool_sell_exact_routed" :  0,
         "pool_buy_exact" :          0,
         "pool_buy_exact_routed" :   0,
-        "lock" :                    0,
-        "claim_init" :              0,
-        "claim_confirm" :           0,
-        "claim" :                   0
+        "bridge_lock" :             0,
+        "bridge_claim_init" :       0,
+        "bridge_claim_confirm" :    0,
+        "bridge_set_owner" :        0,
+        "bridge_set_threshold" :    0,
+        "bridge_add_validator" :    0,
+        "bridge_remove_validator" : 0,
+        "bridge_add_network" :      0,
+        "bridge_remove_network" :   0
     },
 };
 
@@ -434,8 +439,7 @@ module.exports = class EnecuumNetwork extends Network {
             let tx_info = await http_get(url);
             tx_info = JSON.parse(tx_info);
             if (tx_info.status === 3){
-                let parser = new ContractParser(config);
-                let parsed_data = parser.parse(tx_info.data);                
+                let parsed_data = this.parse_data(tx_info.data);                
                 return parsed_data.parameters;
             } else {
                 console.error(`Bad tx status`);
@@ -445,6 +449,13 @@ module.exports = class EnecuumNetwork extends Network {
             console.error(e);
             return null;
         }
+    }
+
+    parse_data(data) {
+        let parser = new ContractParser(config);
+        if (!parser.isContract(data))
+            throw new Error("invalid contract");
+        return parser.parse(data);
     }
     
     async read_lock(tx_hash) {
@@ -456,9 +467,9 @@ module.exports = class EnecuumNetwork extends Network {
             let tx_info = await http_get(url);
             tx_info = JSON.parse(tx_info);
 
-            let parser = new ContractParser(config);
-
-            let params = parser.parse(tx_info.data);
+            if (tx_info.data.indexOf("undefined"))
+                throw new Error("invalid data")
+            let params = this.parse_data(tx_info.data);
 
             console.trace(JSON.stringify(params));
 
@@ -626,7 +637,7 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Creating new enecuum ticker from string ${origin_ticker}`);
 
         origin_ticker = origin_ticker.replace(/[^a-z]/gi, '');
-        let result = 'SB' + origin_ticker.substring(0, 4);
+        let result = /*'SB' + */origin_ticker.substring(0, 6);
         return result;
     }
 
@@ -634,7 +645,6 @@ module.exports = class EnecuumNetwork extends Network {
         console.trace(`Creating new enecuum name from string ${origin_name}`);
         origin_name = origin_name.replace(/[^a-z]/gi, '');
         let result = origin_name.substring(0, 20);
-        //let result = "wrapped token";
         return result;
     }
 
