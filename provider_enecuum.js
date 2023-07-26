@@ -439,8 +439,7 @@ module.exports = class EnecuumNetwork extends Network {
             let tx_info = await http_get(url);
             tx_info = JSON.parse(tx_info);
             if (tx_info.status === 3){
-                let parser = new ContractParser(config);
-                let parsed_data = parser.parse(tx_info.data);                
+                let parsed_data = this.parse_data(tx_info.data);                
                 return parsed_data.parameters;
             } else {
                 console.error(`Bad tx status`);
@@ -450,6 +449,13 @@ module.exports = class EnecuumNetwork extends Network {
             console.error(e);
             return null;
         }
+    }
+
+    parse_data(data) {
+        let parser = new ContractParser(config);
+        if (!parser.isContract(data))
+            throw new Error("invalid contract");
+        return parser.parse(data);
     }
     
     async read_lock(tx_hash) {
@@ -461,10 +467,9 @@ module.exports = class EnecuumNetwork extends Network {
             let tx_info = await http_get(url);
             tx_info = JSON.parse(tx_info);
 
-            let parser = new ContractParser(config);
             if (tx_info.data.indexOf("undefined"))
                 throw new Error("invalid data")
-            let params = parser.parse(tx_info.data);
+            let params = this.parse_data(tx_info.data);
 
             console.trace(JSON.stringify(params));
 
