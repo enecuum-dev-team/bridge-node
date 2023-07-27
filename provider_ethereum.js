@@ -359,7 +359,7 @@ module.exports = class EthereumNetwork extends Network{
 
 		 	console.debug(`get_transfer call params: ${JSON.stringify(params)}`);
 
-	 		let nonce = await contract.methods.getTransfer(...params).call();
+	 		let nonce = await contract.methods.getChannelNonce(...params).call();
 
 	 		return [{nonce:Number(nonce)}];
 
