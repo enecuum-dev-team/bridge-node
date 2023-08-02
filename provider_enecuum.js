@@ -239,7 +239,7 @@ module.exports = class EnecuumNetwork extends Network {
             "name",
         ];
 
-        let type = "claim_init";
+        let type = "bridge_claim_init";
 
         let args = {};
 
@@ -269,7 +269,7 @@ module.exports = class EnecuumNetwork extends Network {
             "ticket_hash",
         ];
 
-        let type = "claim_confirm";
+        let type = "bridge_claim_confirm";
 
         let args = {};
 
@@ -299,7 +299,7 @@ module.exports = class EnecuumNetwork extends Network {
             "nonce"
         ];
 
-        let type = "lock";
+        let type = "bridge_lock";
 
         let args = {};
 
