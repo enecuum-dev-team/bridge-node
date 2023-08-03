@@ -239,7 +239,7 @@ module.exports = class EnecuumNetwork extends Network {
             "name",
         ];
 
-        let type = "claim_init";
+        let type = "bridge_claim_init";
 
         let args = {};
 
@@ -269,7 +269,7 @@ module.exports = class EnecuumNetwork extends Network {
             "ticket_hash",
         ];
 
-        let type = "claim_confirm";
+        let type = "bridge_claim_confirm";
 
         let args = {};
 
@@ -299,7 +299,7 @@ module.exports = class EnecuumNetwork extends Network {
             "nonce"
         ];
 
-        let type = "lock";
+        let type = "bridge_lock";
 
         let args = {};
 
@@ -636,15 +636,15 @@ module.exports = class EnecuumNetwork extends Network {
     create_ticker_from(origin_ticker){
         console.trace(`Creating new enecuum ticker from string ${origin_ticker}`);
 
-        origin_ticker = origin_ticker.replace(/[^a-z]/gi, '');
-        let result = /*'SB' + */origin_ticker.substring(0, 6);
+        origin_ticker = origin_ticker.replace(/^[A-Z]{1,6}$/gi, '');
+        let result = origin_ticker.substring(0, 6);
         return result;
     }
 
     create_name_from(origin_name){
         console.trace(`Creating new enecuum name from string ${origin_name}`);
-        origin_name = origin_name.replace(/[^a-z]/gi, '');
-        let result = origin_name.substring(0, 20);
+        origin_name = origin_name.replace(/^[0-9a-zA-Z\/\+= _\-/.]{0,512}$/gi, '');
+        let result = origin_name.substring(0, 511);
         return result;
     }
 
