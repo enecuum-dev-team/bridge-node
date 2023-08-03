@@ -32,6 +32,7 @@ decimals[97] = 18;
 decimals[66] = 10;
 decimals[123] = 10;
 decimals[80001] = 18;
+decimals[11155111] = 18;
 
 module.exports = class Node {
 	constructor(config) {
