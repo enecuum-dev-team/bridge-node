@@ -636,14 +636,18 @@ module.exports = class EnecuumNetwork extends Network {
     create_ticker_from(origin_ticker){
         console.trace(`Creating new enecuum ticker from string ${origin_ticker}`);
 
-        origin_ticker = origin_ticker.replace(/^[A-Z]{1,6}$/gi, '');
+        origin_ticker = origin_ticker.toUpperCase();
+        origin_ticker = origin_ticker.replace(/[^A-Z]/g, '');
         let result = origin_ticker.substring(0, 6);
+        if (result === ""){
+            result = "SBTKN";
+        }
         return result;
     }
 
     create_name_from(origin_name){
         console.trace(`Creating new enecuum name from string ${origin_name}`);
-        origin_name = origin_name.replace(/^[0-9a-zA-Z\/\+= _\-/.]{0,512}$/gi, '');
+        origin_name = origin_name.replace(/[^0-9a-zA-Z\/\+= _\-/.]/g, '');
         let result = origin_name.substring(0, 511);
         return result;
     }
