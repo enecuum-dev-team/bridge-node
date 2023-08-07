@@ -466,8 +466,7 @@ module.exports = class EnecuumNetwork extends Network {
             console.trace(`url = ${url}`);
             let tx_info = await http_get(url);
             tx_info = JSON.parse(tx_info);
-
-            if (tx_info.data.indexOf("undefined"))
+            if (tx_info.data.indexOf("undefined")!==-1)
                 throw new Error("invalid data")
             let params = this.parse_data(tx_info.data);
 
