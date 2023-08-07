@@ -510,7 +510,7 @@ module.exports = class EnecuumNetwork extends Network {
         } catch(e) {
             console.error(e);
         }
-
+        console.info({network_id})
         try {
             minted = await this.get_minted_tokens();
         } catch(e){

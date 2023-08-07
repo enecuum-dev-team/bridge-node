@@ -23,6 +23,8 @@ let trim_0x = function(str){
 }
 
 let decimals = [];
+
+decimals[0] = 10;
 decimals[1] = 10;
 decimals[5] = 18;
 decimals[17] = 2;
@@ -379,7 +381,7 @@ module.exports = class Node {
 	}
 
 	async start(){
-		this.initialize_providers();
+		await this.initialize_providers();
 
 		this.app.listen(this.config.port, function(){
 			console.info('Explorer started at ::', this.config.port);
@@ -410,7 +412,8 @@ module.exports = class Node {
 			}
 			console.info(`Smart contract state = ${JSON.stringify(state)}`);
 
-			if (state.network_id){
+			console.info(state.network_id)
+			if (state.network_id !== undefined){
 				network.network_id = state.network_id;
 			} else {
 				console.warn(`network_id for ${network.caption} not set, setting to -1`);
