@@ -25,15 +25,20 @@ let trim_0x = function(str){
 let decimals = [];
 
 decimals[0] = 10;
-decimals[1] = 10;
+decimals[1] = 18;
 decimals[5] = 18;
+decimals[10] = 18;
 decimals[17] = 2;
 decimals[23] = 3;
 decimals[29] = 4;
+decimals[56] = 18;
 decimals[97] = 18;
 decimals[66] = 10;
+decimals[111] = 10;
 decimals[123] = 10;
+decimals[137] = 18;
 decimals[80001] = 18;
+decimals[42161] = 18;
 decimals[11155111] = 18;
 
 module.exports = class Node {
@@ -104,6 +109,7 @@ module.exports = class Node {
 	
 				// choose source network
 				let src_network = config.networks.filter((network) => {return network.network_id === Number(src_network_id)})[0];
+				
 				if (src_network === undefined){
 					console.error(`Failed to select source network - wrong src_network_id ${src_network_id}`);
 					throw(`failed to select network`);
